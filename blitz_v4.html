@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>BLITZ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@400;700&display=swap');
+
+:root {
+  --felt: #2d5a3d;
+  --felt-d: #1a3d28;
+  --felt-l: #3d7050;
+  --ink: #1a1410;
+  --accent: #c0392b;
+  --gold: #f9c74f;
+  --card: #fdf9f0;
+  --card-b: #ddd0b8;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+
+body {
+  background: var(--felt);
+  font-family: 'Noto Sans KR', sans-serif;
+  width: 100dvw; height: 100dvh;
+  overflow: hidden;
+}
+
+.screen { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+.screen.active { display: flex; }
+
+/* ── SETUP ── */
+#setup {
+  flex-direction: column; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at center, var(--felt-l), var(--felt-d));
+  padding: 32px 24px; gap: 20px;
+}
+.logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(80px, 20vw, 120px);
+  color: white;
+  letter-spacing: 8px;
+  text-shadow: 0 4px 32px rgba(0,0,0,.6);
+  line-height: 1;
+}
+.logo em { color: var(--gold); font-style: normal; }
+
+.setup-box {
+  background: rgba(0,0,0,.28); border: 1px solid rgba(255,255,255,.12);
+  border-radius: 24px; padding: 24px 22px;
+  width: 100%; max-width: 440px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+.slabel { font-size: 11px; font-weight: 700; letter-spacing: 3px; color: rgba(255,255,255,.4); text-transform: uppercase; margin-bottom: 10px; }
+
+.count-row { display: flex; gap: 10px; }
+.count-btn {
+  flex: 1; padding: 16px 8px;
+  border: 2px solid rgba(255,255,255,.15); border-radius: 14px;
+  background: rgba(255,255,255,.07);
+  font-family: 'Bebas Neue', sans-serif; font-size: 28px;
+  color: rgba(255,255,255,.4); cursor: pointer; transition: all .2s;
+}
+.count-btn.active { border-color: var(--gold); color: var(--gold); background: rgba(249,199,79,.1); }
+
+.name-inputs { display: flex; flex-direction: column; gap: 8px; }
+.name-input {
+  width: 100%; padding: 13px 16px;
+  border: 2px solid rgba(255,255,255,.12); border-radius: 12px;
+  background: rgba(255,255,255,.07); font-size: 16px; color: white; outline: none;
+}
+.name-input::placeholder { color: rgba(255,255,255,.25); }
+.name-input:focus { border-color: rgba(255,255,255,.4); }
+
+/* card count slider */
+.card-count-row { display: flex; align-items: center; gap: 14px; }
+.cc-btn {
+  width: 44px; height: 44px; border-radius: 12px; border: none;
+  background: rgba(255,255,255,.1); color: white; font-size: 22px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: background .15s;
+}
+.cc-btn:active { background: rgba(255,255,255,.2); }
+.cc-val {
+  font-family: 'Bebas Neue', sans-serif; font-size: 36px; color: var(--gold);
+  min-width: 60px; text-align: center;
+}
+.cc-desc { font-size: 12px; color: rgba(255,255,255,.35); }
+
+.start-btn {
+  width: 100%; max-width: 440px; padding: 18px; border: none; border-radius: 16px;
+  background: var(--gold); color: var(--ink);
+  font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 4px;
+  cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,.35); transition: transform .15s;
+}
+.start-btn:active { transform: scale(.97); }
+
+/* ── GAME TABLE ── */
+#game {
+  position: relative;
+  background: radial-gradient(ellipse at center, var(--felt-l) 0%, var(--felt) 50%, var(--felt-d) 100%);
+}
+#game::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 4px, rgba(0,0,0,.018) 4px, rgba(0,0,0,.018) 8px),
+    repeating-linear-gradient(90deg, transparent, transparent 4px, rgba(0,0,0,.018) 4px, rgba(0,0,0,.018) 8px);
+}
+
+/* ── CENTER ── */
+.center-area {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex; flex-direction: row;
+  align-items: center; justify-content: center;
+  gap: 14px; z-index: 10;
+}
+
+/* Deck card (dark back) */
+.deck-card {
+  width: 88px; height: 124px;
+  background: var(--ink);
+  border: 3px solid rgba(255,255,255,.12);
+  border-radius: 14px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 #0a0806, 8px 8px 0 rgba(0,0,0,.28);
+  transition: transform .12s, box-shadow .12s;
+  flex-shrink: 0;
+}
+.deck-card:active { transform: translate(4px,4px); box-shadow: 0 0 0; }
+.deck-card.empty { opacity: .25; pointer-events: none; }
+.deck-card-num { font-family: 'Bebas Neue', sans-serif; font-size: 40px; color: white; line-height: 1; }
+.deck-card-lbl { font-size: 10px; letter-spacing: 2px; color: rgba(255,255,255,.3); margin-top: 4px; }
+
+/* Wild card (between decks) */
+.wild-card {
+  width: 88px; height: 124px;
+  background: var(--card); border: 2px solid var(--card-b);
+  border-radius: 14px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 8px;
+  box-shadow: 2px 2px 10px rgba(0,0,0,.35);
+  flex-shrink: 0;
+}
+.wild-syms { display: flex; gap: 6px; font-size: 30px; }
+.wild-label { font-size: 9px; letter-spacing: 2px; color: #8b7a60; text-transform: uppercase; }
+
+.wild-slot-empty {
+  width: 88px; height: 124px;
+  border-radius: 14px;
+  border: 2px dashed rgba(255,255,255,.1);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── PLAYER AREAS ── */
+.player-area {
+  position: absolute;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 10px;
+  z-index: 5;
+}
+
+.player-area[data-pos="bottom"]       { bottom: 18px; left: 50%; transform: translateX(-50%); }
+.player-area[data-pos="top"]          { top: 18px;    left: 50%; transform: translateX(-50%) rotate(180deg); }
+.player-area[data-pos="left"]         { left: 18px;   top: 50%;  transform: translateY(-50%) rotate(90deg); }
+.player-area[data-pos="right"]        { right: 18px;  top: 50%;  transform: translateY(-50%) rotate(-90deg); }
+.player-area[data-pos="bottom-left"]  { bottom: 18px; left: 18px; }
+.player-area[data-pos="bottom-right"] { bottom: 18px; right: 18px; }
+.player-area[data-pos="top-left"]     { top: 18px;    left: 18px;  transform: rotate(180deg); }
+.player-area[data-pos="top-right"]    { top: 18px;    right: 18px; transform: rotate(180deg); }
+
+.player-row { display: flex; gap: 14px; align-items: flex-end; }
+
+/* Play pile card */
+.play-pile-card {
+  width: 150px; height: 210px;
+  border-radius: 18px;
+  background: var(--card);
+  border: 2px solid var(--card-b);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: space-between;
+  box-shadow: 0 6px 24px rgba(0,0,0,.5);
+  position: relative; overflow: hidden;
+  padding: 12px 8px;
+}
+.play-pile-card.empty {
+  background: rgba(255,255,255,.04);
+  border: 2px dashed rgba(255,255,255,.2);
+  box-shadow: none;
+  align-items: center; justify-content: center;
+}
+.play-pile-card.match {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 5px rgba(192,57,43,.5), 0 6px 24px rgba(0,0,0,.5);
+  animation: matchglow 1s infinite alternate;
+}
+@keyframes matchglow {
+  from { box-shadow: 0 0 0 5px rgba(192,57,43,.55), 0 6px 24px rgba(0,0,0,.5); }
+  to   { box-shadow: 0 0 0 10px rgba(192,57,43,.1), 0 6px 24px rgba(0,0,0,.5); }
+}
+
+/* Card face — top half (owner reads) */
+.card-face-top {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  width: 100%;
+}
+/* Card face — bottom half (opposite player reads, rotated 180) */
+.card-face-bottom {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  width: 100%;
+  transform: rotate(180deg);
+}
+.card-sym-lg { font-size: 52px; line-height: 1; }
+.card-sym-sm { font-size: 28px; line-height: 1; }
+.card-topic-lg { font-size: 13px; font-weight: 700; text-align: center; color: #5a4a32; line-height: 1.25; }
+.card-topic-sm { font-size: 10px; font-weight: 700; text-align: center; color: #8b7a60; line-height: 1.2; }
+.card-pile-cnt { position: absolute; font-size: 10px; color: rgba(0,0,0,.25); }
+
+/* Score pile */
+.score-pile-btn {
+  width: 106px; height: 148px;
+  border-radius: 16px;
+  background: rgba(255,255,255,.07);
+  border: 2px dashed rgba(255,255,255,.2);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 4px;
+  cursor: pointer;
+  transition: border-color .2s, background .2s, box-shadow .2s;
+}
+.score-pile-btn.claimable {
+  border-color: var(--gold);
+  background: rgba(249,199,79,.12);
+  box-shadow: 0 0 0 4px rgba(249,199,79,.3);
+  animation: scoreglow 1s infinite alternate;
+}
+@keyframes scoreglow {
+  from { box-shadow: 0 0 0 4px rgba(249,199,79,.35); }
+  to   { box-shadow: 0 0 0 8px rgba(249,199,79,.07); }
+}
+.score-num { font-family: 'Bebas Neue', sans-serif; font-size: 38px; color: white; line-height: 1; }
+.score-lbl { font-size: 10px; letter-spacing: 1px; color: rgba(255,255,255,.3); text-transform: uppercase; }
+
+.player-name-tag {
+  font-size: 12px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: rgba(255,255,255,.45);
+}
+.player-name-tag.cur { color: var(--gold); }
+
+/* Turn label in center */
+.turn-label {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%) translateY(84px);
+  font-size: 11px; letter-spacing: 2px;
+  color: rgba(255,255,255,.18); text-transform: uppercase;
+  pointer-events: none; z-index: 4;
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: 3px;
+}
+
+/* ── END ── */
+#end {
+  flex-direction: column; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at center, var(--felt-l), var(--felt-d));
+  padding: 40px 24px; gap: 0;
+}
+.end-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(60px,16vw,90px); letter-spacing: 6px; color: white; text-align: center; }
+.end-sub { font-size: 11px; letter-spacing: 3px; color: rgba(255,255,255,.4); text-align: center; margin-bottom: 28px; margin-top: 6px; text-transform: uppercase; }
+.lb { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 10px; }
+.lb-row { display: flex; align-items: center; gap: 16px; background: rgba(255,255,255,.09); border-radius: 18px; padding: 18px 24px; }
+.lb-row.first { background: rgba(249,199,79,.14); }
+.lb-rank { font-family: 'Bebas Neue', sans-serif; font-size: 32px; color: rgba(255,255,255,.25); width: 32px; text-align: center; }
+.lb-rank.gold { color: var(--gold); }
+.lb-name { flex: 1; font-size: 18px; font-weight: 700; color: white; }
+.lb-score { font-family: 'Bebas Neue', sans-serif; font-size: 30px; color: var(--gold); }
+.end-btns { display: flex; gap: 12px; margin-top: 32px; width: 100%; max-width: 420px; }
+.end-btn { flex: 1; padding: 18px; border-radius: 14px; border: 2px solid rgba(255,255,255,.15); background: rgba(255,255,255,.08); color: white; font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 3px; cursor: pointer; transition: transform .1s; }
+.end-btn.primary { background: var(--gold); color: var(--ink); border-color: transparent; }
+.end-btn:active { transform: scale(.97); }
+
+.toast { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%) translateY(14px); background: rgba(0,0,0,.88); color: white; padding: 11px 24px; border-radius: 40px; font-size: 14px; font-weight: 600; opacity: 0; transition: all .3s; pointer-events: none; z-index: 999; white-space: nowrap; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div id="setup" class="screen active">
+  <div class="logo">BL<em>I</em>TZ</div>
+  <div class="setup-box">
+    <div>
+      <div class="slabel">플레이어 수</div>
+      <div class="count-row" id="count-row">
+        <button class="count-btn active" data-n="2">2</button>
+        <button class="count-btn" data-n="3">3</button>
+        <button class="count-btn" data-n="4">4</button>
+      </div>
+    </div>
+    <div>
+      <div class="slabel">이름</div>
+      <div class="name-inputs" id="name-inputs"></div>
+    </div>
+    <div>
+      <div class="slabel">총 카드 수</div>
+      <div class="card-count-row">
+        <button class="cc-btn" id="cc-dec">−</button>
+        <div>
+          <div class="cc-val" id="cc-val">54</div>
+          <div class="cc-desc">덱 A + 덱 B 합산</div>
+        </div>
+        <button class="cc-btn" id="cc-inc">+</button>
+      </div>
+    </div>
+  </div>
+  <button class="start-btn" onclick="startGame()">START</button>
+</div>
+
+<!-- GAME -->
+<div id="game" class="screen">
+  <div class="center-area" id="center-area">
+    <div class="deck-card" id="deck0" onclick="drawCard(0)">
+      <div class="deck-card-num" id="d0n">—</div>
+      <div class="deck-card-lbl">덱 A</div>
+    </div>
+    <div id="wild-slot"></div>
+    <div class="deck-card" id="deck1" onclick="drawCard(1)">
+      <div class="deck-card-num" id="d1n">—</div>
+      <div class="deck-card-lbl">덱 B</div>
+    </div>
+  </div>
+  <div class="turn-label" id="turn-label"></div>
+  <div id="player-areas"></div>
+</div>
+
+<!-- END -->
+<div id="end" class="screen">
+  <div class="end-title">GAME OVER</div>
+  <div class="end-sub">덱 소진 — 최종 결과</div>
+  <div class="lb" id="lb"></div>
+  <div class="end-btns">
+    <button class="end-btn" onclick="location.reload()">처음으로</button>
+    <button class="end-btn primary" onclick="newGame()">재시작</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var SYMBOLS = [
+  { char: '●', color: '#d63031' },
+  { char: '◆', color: '#2980b9' },
+  { char: '★', color: '#e67e22' },
+  { char: '■', color: '#8e44ad' }
+];
+var TOPICS = ['사실 판단', '가치 판단', '도덕 판단'];
+var WILD_COMBOS = [];
+for (var _i = 0; _i < 4; _i++)
+  for (var _j = _i + 1; _j < 4; _j++)
+    WILD_COMBOS.push([_i, _j]);
+
+var POSITIONS = {
+  2: ['bottom', 'top'],
+  3: ['bottom', 'left', 'right'],
+  4: ['bottom-left', 'bottom-right', 'top-left', 'top-right']
+};
+
+var G = {};
+var numPlayers = 2;
+var totalCards = 54;
+var MIN_CARDS = 20;
+var MAX_CARDS = 120;
+
+// Setup UI
+document.getElementById('count-row').addEventListener('click', function(e) {
+  var btn = e.target.closest('[data-n]');
+  if (!btn) return;
+  numPlayers = +btn.dataset.n;
+  document.querySelectorAll('.count-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  buildNameInputs(numPlayers);
+});
+
+document.getElementById('cc-dec').onclick = function() {
+  if (totalCards > MIN_CARDS) { totalCards -= 6; updateCC(); }
+};
+document.getElementById('cc-inc').onclick = function() {
+  if (totalCards < MAX_CARDS) { totalCards += 6; updateCC(); }
+};
+function updateCC() {
+  document.getElementById('cc-val').textContent = totalCards;
+}
+
+function buildNameInputs(n) {
+  var c = document.getElementById('name-inputs');
+  c.innerHTML = '';
+  for (var i = 0; i < n; i++) {
+    var inp = document.createElement('input');
+    inp.className = 'name-input';
+    inp.placeholder = '플레이어 ' + (i + 1);
+    inp.value = '플레이어 ' + (i + 1);
+    inp.id = 'pn' + i;
+    c.appendChild(inp);
+  }
+}
+buildNameInputs(2);
+
+function startGame() {
+  numPlayers = +document.querySelector('.count-btn.active').dataset.n;
+  var names = [];
+  for (var i = 0; i < numPlayers; i++) {
+    var el = document.getElementById('pn' + i);
+    names.push(el ? (el.value.trim() || '플레이어 ' + (i + 1)) : '플레이어 ' + (i + 1));
+  }
+  initGame(names);
+}
+function newGame() { initGame(G.players.map(function(p) { return p.name; })); }
+
+// Game init
+function shuffle(a) {
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+function makeDeck(limit) {
+  // Build pool of topic + wild cards, then trim to limit
+  var pool = [];
+  // topic cards: 4 symbols x 3 topics x N copies
+  for (var s = 0; s < 4; s++)
+    for (var t = 0; t < 3; t++)
+      pool.push({ type: 'topic', symbol: s, topic: TOPICS[t] });
+  // wild cards
+  for (var ci = 0; ci < WILD_COMBOS.length; ci++)
+    pool.push({ type: 'wild', symbols: WILD_COMBOS[ci] });
+  // Expand until we have enough
+  var full = [];
+  while (full.length < limit) {
+    var shuffled = shuffle(pool.slice());
+    for (var k = 0; k < shuffled.length && full.length < limit; k++)
+      full.push(shuffled[k]);
+  }
+  return shuffle(full.slice(0, limit));
+}
+
+function initGame(names) {
+  var full = makeDeck(totalCards);
+  var half = Math.ceil(full.length / 2);
+  G = {
+    players: names.map(function(name) {
+      return { name: name, playPile: [], scorePile: [] };
+    }),
+    decks: [shuffle(full.slice(0, half)), shuffle(full.slice(half))],
+    activeWild: null,
+    currentTurn: 0
+  };
+  buildPlayerAreas();
+  showScreen('game');
+  renderGame();
+}
+
+function buildPlayerAreas() {
+  var c = document.getElementById('player-areas');
+  c.innerHTML = '';
+  var pos = POSITIONS[G.players.length];
+  G.players.forEach(function(p, i) {
+    var area = document.createElement('div');
+    area.className = 'player-area';
+    area.setAttribute('data-pos', pos[i]);
+
+    var html =
+      '<div class="player-row">'
+      + '<div class="score-pile-btn" id="sp' + i + '" onclick="claimWin(' + i + ')">'
+      +   '<div class="score-num" id="sn' + i + '">0</div>'
+      +   '<div class="score-lbl">점수</div>'
+      + '</div>'
+      + '<div class="play-pile-card empty" id="pp' + i + '">'
+      +   '<span style="color:rgba(255,255,255,.15);font-size:28px;">—</span>'
+      + '</div>'
+      + '</div>'
+      + '<div class="player-name-tag" id="nt' + i + '">' + p.name + '</div>';
+
+    area.innerHTML = html;
+    c.appendChild(area);
+  });
+}
+
+// Draw
+function drawCard(di) {
+  if (G.decks[di].length === 0) {
+    var other = 1 - di;
+    if (G.decks[other].length === 0) { showEnd(); return; }
+    showToast('그 덱은 비었어요!');
+    return;
+  }
+  var card = G.decks[di].shift();
+  var pi = G.currentTurn;
+
+  if (card.type === 'wild') {
+    G.activeWild = card;
+    renderGame();
+    setTimeout(function() {
+      var next = G.decks[di].length > 0 ? di : 1 - di;
+      drawCard(next);
+    }, 500);
+    return;
+  }
+
+  G.players[pi].playPile.push(card);
+  G.currentTurn = (G.currentTurn + 1) % G.players.length;
+  renderGame();
+
+  if (G.decks[0].length === 0 && G.decks[1].length === 0)
+    setTimeout(showEnd, 500);
+}
+
+// Matching
+function symbolsMatch(s1, s2) {
+  if (s1 === s2) return true;
+  if (G.activeWild) {
+    var a = G.activeWild.symbols[0], b = G.activeWild.symbols[1];
+    if ((s1 === a && s2 === b) || (s1 === b && s2 === a)) return true;
+  }
+  return false;
+}
+
+function getMatchMap() {
+  // Returns object: playerIdx -> opponentIdx (first match found)
+  var map = {};
+  for (var i = 0; i < G.players.length; i++) {
+    for (var j = i + 1; j < G.players.length; j++) {
+      var ti = G.players[i].playPile[G.players[i].playPile.length - 1];
+      var tj = G.players[j].playPile[G.players[j].playPile.length - 1];
+      if (ti && tj && symbolsMatch(ti.symbol, tj.symbol)) {
+        if (!(i in map)) map[i] = j;
+        if (!(j in map)) map[j] = i;
+      }
+    }
+  }
+  return map;
+}
+
+// Claim win by tapping score pile
+function claimWin(winnerIdx) {
+  var map = getMatchMap();
+  if (!(winnerIdx in map)) return; // not in a match
+  var loserIdx = map[winnerIdx];
+  var loser = G.players[loserIdx];
+  if (loser.playPile.length > 0) {
+    G.players[winnerIdx].scorePile.push(loser.playPile.pop());
+  }
+  renderGame();
+}
+
+// Render
+function renderGame() {
+  document.getElementById('d0n').textContent = G.decks[0].length;
+  document.getElementById('d1n').textContent = G.decks[1].length;
+  document.getElementById('deck0').classList.toggle('empty', G.decks[0].length === 0);
+  document.getElementById('deck1').classList.toggle('empty', G.decks[1].length === 0);
+
+  // Wild slot
+  var ws = document.getElementById('wild-slot');
+  if (G.activeWild) {
+    var s0 = SYMBOLS[G.activeWild.symbols[0]];
+    var s1 = SYMBOLS[G.activeWild.symbols[1]];
+    ws.className = '';
+    ws.innerHTML =
+      '<div class="wild-card">'
+      + '<div class="wild-syms">'
+      + '<span style="color:' + s0.color + '">' + s0.char + '</span>'
+      + '<span style="color:' + s1.color + '">' + s1.char + '</span>'
+      + '</div>'
+      + '<div class="wild-label">WILD</div>'
+      + '</div>';
+  } else {
+    ws.className = 'wild-slot-empty';
+    ws.innerHTML = '<span style="color:rgba(255,255,255,.1);font-size:18px;letter-spacing:2px;font-family:Bebas Neue,sans-serif;">W</span>';
+  }
+
+  // Turn label
+  document.getElementById('turn-label').textContent = G.players[G.currentTurn].name + ' TURN';
+
+  // Match map
+  var map = getMatchMap();
+
+  G.players.forEach(function(p, i) {
+    var top = p.playPile[p.playPile.length - 1];
+    var pile = document.getElementById('pp' + i);
+    var isMatch = i in map;
+    var isCur = i === G.currentTurn;
+
+    if (top) {
+      var sym = SYMBOLS[top.symbol];
+      pile.className = 'play-pile-card' + (isMatch ? ' match' : '');
+      // Card shows symbol in color, topic text — both top and bottom (rotated)
+      pile.innerHTML =
+        '<div class="card-face-top">'
+        + '<div class="card-sym-sm" style="color:' + sym.color + '">' + sym.char + '</div>'
+        + '<div class="card-topic-sm">' + top.topic + '</div>'
+        + '</div>'
+        + '<div class="card-sym-lg" style="color:' + sym.color + '">' + sym.char + '</div>'
+        + '<div class="card-face-bottom">'
+        + '<div class="card-sym-sm" style="color:' + sym.color + '">' + sym.char + '</div>'
+        + '<div class="card-topic-sm">' + top.topic + '</div>'
+        + '</div>'
+        + '<div class="card-pile-cnt" style="bottom:6px;right:8px;">' + p.playPile.length + '</div>';
+    } else {
+      pile.className = 'play-pile-card empty';
+      pile.innerHTML = '<span style="color:rgba(255,255,255,.15);font-size:28px;">—</span>';
+    }
+
+    // Score pile
+    var sp = document.getElementById('sp' + i);
+    sp.className = 'score-pile-btn' + (isMatch ? ' claimable' : '');
+    document.getElementById('sn' + i).textContent = p.scorePile.length;
+
+    // Name
+    var nt = document.getElementById('nt' + i);
+    nt.textContent = p.name;
+    nt.className = 'player-name-tag' + (isCur ? ' cur' : '');
+  });
+}
+
+// End
+function showEnd() {
+  var sorted = G.players.map(function(p) {
+    return { name: p.name, score: p.scorePile.length };
+  }).sort(function(a, b) { return b.score - a.score; });
+
+  var lb = document.getElementById('lb');
+  lb.innerHTML = '';
+  for (var rank = 0; rank < sorted.length; rank++) {
+    var p = sorted[rank];
+    var f = rank === 0;
+    lb.innerHTML +=
+      '<div class="lb-row' + (f ? ' first' : '') + '">'
+      + '<div class="lb-rank' + (f ? ' gold' : '') + '">' + (rank + 1) + '</div>'
+      + '<div class="lb-name">' + p.name + '</div>'
+      + '<div class="lb-score">' + p.score + '장</div>'
+      + '</div>';
+  }
+  showScreen('end');
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+  document.getElementById(id).classList.add('active');
+}
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(function() { t.classList.remove('show'); }, 2000);
+}
+</script>
+</body>
+</html>
