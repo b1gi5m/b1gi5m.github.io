@@ -10,6 +10,7 @@ let myNumber = null;
 let lastState = null;      // 호스트로부터 마지막으로 받은 상태
 let reconnectAttempts = 0;
 let reconnectTimer = null;
+let heartbeatTimer = null;      // 좀비 연결(겉으론 열려있지만 실제론 끊긴 상태) 감지 + 상태 재동기화용
 
 let introSeenForTs = null;       // 이번 활동(activityStartedAt)에 대해 조건 확인 화면을 이미 봤는지
 let lastRenderedQuestionIndex = null;
@@ -61,6 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
   on('btn-confirm-choice', 'click', confirmChoice);
 
   window.addEventListener('beforeunload', () => {
+    stopHeartbeat();
     if (myPeer) myPeer.destroy();
   });
 
@@ -80,6 +82,7 @@ function startJoin(roomCode, number, existingKey) {
   introSeenForTs = null;
   lastRenderedQuestionIndex = null;
   pendingChoice = null;
+  stopHeartbeat();
 
   document.getElementById('room-code-chip').textContent = roomCode;
   showView('waiting');
@@ -99,6 +102,7 @@ function startJoin(roomCode, number, existingKey) {
 }
 
 function connectToHost() {
+  stopHeartbeat();
   if (myConn) {
     try { myConn.close(); } catch (e) {}
   }
@@ -108,6 +112,7 @@ function connectToHost() {
     reconnectAttempts = 0;
     myConn.send({ type: 'join', studentKey: myStudentKey, number: myNumber });
     saveStudentSession(myRoomCode, myStudentKey, myNumber);
+    startHeartbeat();
   });
 
   myConn.on('data', msg => {
@@ -121,13 +126,38 @@ function connectToHost() {
   });
 
   myConn.on('close', () => {
+    stopHeartbeat();
     scheduleReconnect();
   });
 
   myConn.on('error', err => {
     console.error('연결 오류:', err);
+    stopHeartbeat();
     scheduleReconnect();
   });
+}
+
+// 겉으로는 "열려있음"으로 보이지만 실제로는 끊어진 좀비 연결을 감지하고,
+// 혹시 놓친 상태 업데이트(예: 방 삭제, 질문 전환)가 있다면 주기적으로 다시 동기화합니다.
+function startHeartbeat() {
+  stopHeartbeat();
+  heartbeatTimer = setInterval(() => {
+    if (!myConn) return;
+    try {
+      if (!myConn.open) throw new Error('connection not open');
+      myConn.send({ type: 'requestState', studentKey: myStudentKey, number: myNumber });
+    } catch (e) {
+      console.warn('하트비트 전송 실패 - 연결이 끊어진 것으로 간주합니다.', e);
+      stopHeartbeat();
+      scheduleReconnect();
+    }
+  }, 5000);
+}
+function stopHeartbeat() {
+  if (heartbeatTimer) {
+    clearInterval(heartbeatTimer);
+    heartbeatTimer = null;
+  }
 }
 
 function handleConnectFailure() {
@@ -135,6 +165,7 @@ function handleConnectFailure() {
 }
 
 function handleRoomDeleted() {
+  stopHeartbeat();
   if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
   if (myConn) { try { myConn.close(); } catch (e) {} }
   if (myPeer) { try { myPeer.destroy(); } catch (e) {} }
@@ -147,6 +178,7 @@ function handleRoomDeleted() {
 }
 
 function scheduleReconnect() {
+  stopHeartbeat();
   if (reconnectTimer) return;
   reconnectAttempts++;
 
