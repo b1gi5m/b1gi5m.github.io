@@ -11,6 +11,8 @@ let lastState = null;      // 호스트로부터 마지막으로 받은 상태
 let reconnectAttempts = 0;
 let reconnectTimer = null;
 let heartbeatTimer = null;      // 좀비 연결(겉으론 열려있지만 실제론 끊긴 상태) 감지 + 상태 재동기화용
+let connGeneration = 0;         // 매 연결 시도마다 증가 - 오래된 연결의 뒤늦은 이벤트를 무시하기 위함
+let shuttingDown = false;       // 방 삭제 등으로 "의도적으로" 연결을 끊는 중인지 여부
 
 let introSeenForTs = null;       // 이번 활동(activityStartedAt)에 대해 조건 확인 화면을 이미 봤는지
 let lastRenderedQuestionIndex = null;
@@ -75,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function startJoin(roomCode, number, existingKey) {
+  shuttingDown = false;
   myRoomCode = roomCode;
   myNumber = number;
   myStudentKey = existingKey || sanitizeKey(number);
@@ -88,6 +91,7 @@ function startJoin(roomCode, number, existingKey) {
   showView('waiting');
   document.getElementById('waiting-number').textContent = number;
 
+  connGeneration++; // 이전 연결/피어의 뒤늦은 이벤트를 모두 무효화
   if (myPeer) {
     try { myPeer.destroy(); } catch (e) {}
   }
@@ -96,6 +100,7 @@ function startJoin(roomCode, number, existingKey) {
   myPeer.on('open', () => connectToHost());
 
   myPeer.on('error', err => {
+    if (shuttingDown) return;
     console.error('Peer error:', err);
     handleConnectFailure();
   });
@@ -106,9 +111,12 @@ function connectToHost() {
   if (myConn) {
     try { myConn.close(); } catch (e) {}
   }
+  connGeneration++;
+  const myGen = connGeneration;
   myConn = myPeer.connect(peerIdFor(myRoomCode), { reliable: true });
 
   myConn.on('open', () => {
+    if (myGen !== connGeneration || shuttingDown) return;
     reconnectAttempts = 0;
     myConn.send({ type: 'join', studentKey: myStudentKey, number: myNumber });
     saveStudentSession(myRoomCode, myStudentKey, myNumber);
@@ -116,6 +124,7 @@ function connectToHost() {
   });
 
   myConn.on('data', msg => {
+    if (myGen !== connGeneration || shuttingDown) return;
     if (!msg || !msg.type) return;
     if (msg.type === 'state') {
       lastState = msg;
@@ -126,11 +135,13 @@ function connectToHost() {
   });
 
   myConn.on('close', () => {
+    if (myGen !== connGeneration || shuttingDown) return;
     stopHeartbeat();
     scheduleReconnect();
   });
 
   myConn.on('error', err => {
+    if (myGen !== connGeneration || shuttingDown) return;
     console.error('연결 오류:', err);
     stopHeartbeat();
     scheduleReconnect();
@@ -141,8 +152,9 @@ function connectToHost() {
 // 혹시 놓친 상태 업데이트(예: 방 삭제, 질문 전환)가 있다면 주기적으로 다시 동기화합니다.
 function startHeartbeat() {
   stopHeartbeat();
+  const myGen = connGeneration;
   heartbeatTimer = setInterval(() => {
-    if (!myConn) return;
+    if (shuttingDown || myGen !== connGeneration || !myConn) return;
     try {
       if (!myConn.open) throw new Error('connection not open');
       myConn.send({ type: 'requestState', studentKey: myStudentKey, number: myNumber });
@@ -161,14 +173,22 @@ function stopHeartbeat() {
 }
 
 function handleConnectFailure() {
+  if (shuttingDown) return;
   scheduleReconnect();
 }
 
 function handleRoomDeleted() {
+  shuttingDown = true;
+  connGeneration++; // 지금 닫는 연결에서 뒤늦게 발생하는 close/error 이벤트를 전부 무시하게 함
   stopHeartbeat();
   if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
   if (myConn) { try { myConn.close(); } catch (e) {} }
   if (myPeer) { try { myPeer.destroy(); } catch (e) {} }
+  myConn = null;
+  myPeer = null;
+  myRoomCode = null;
+  myStudentKey = null;
+  myNumber = null;
   clearStudentSession();
   lastState = null;
   document.getElementById('join-code').value = '';
@@ -178,6 +198,7 @@ function handleRoomDeleted() {
 }
 
 function scheduleReconnect() {
+  if (shuttingDown) return;
   stopHeartbeat();
   if (reconnectTimer) return;
   reconnectAttempts++;
@@ -192,6 +213,7 @@ function scheduleReconnect() {
   const delay = Math.min(2000 * reconnectAttempts, 8000);
   reconnectTimer = setTimeout(() => {
     reconnectTimer = null;
+    if (shuttingDown) return;
     if (myPeer && !myPeer.destroyed) {
       connectToHost();
     } else {
