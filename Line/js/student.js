@@ -63,6 +63,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (myPeer) myPeer.destroy();
   });
 
+  // 화면이 꺼져있거나 다른 앱으로 전환되어 있는 동안에는 모바일 브라우저가 타이머와
+  // 네트워크 연결을 강제로 멈추는 경우가 많습니다. 그 사이의 연결 상태는 신뢰할 수
+  // 없으므로, 화면이 다시 보이는 순간 무조건 처음부터 다시 연결합니다.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') handleBecameVisible();
+  });
+  window.addEventListener('pageshow', () => {
+    if (document.visibilityState === 'visible') handleBecameVisible();
+  });
+
   const saved = loadStudentSession();
   if (saved && saved.roomCode && saved.studentKey) {
     document.getElementById('join-code').value = saved.roomCode;
@@ -70,6 +80,13 @@ document.addEventListener('DOMContentLoaded', () => {
     startJoin(saved.roomCode, saved.number || saved.studentKey, saved.studentKey);
   }
 });
+
+function handleBecameVisible() {
+  if (shuttingDown) return;
+  if (!myRoomCode || !myStudentKey) return; // 아직 입장 전이면 할 일 없음
+  reconnectAttempts = 0;
+  startJoin(myRoomCode, myNumber, myStudentKey);
+}
 
 function startJoin(roomCode, number, existingKey) {
   shuttingDown = false;
