@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>학생 화면 — 사회적 출발선</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div id="conn-warning" style="display:none; background:#B4432E; color:#fff; padding:12px 20px; text-align:center; font-size:0.92rem;"></div>
+
+<div class="app-shell">
+  <div class="topbar">
+    <div class="brand">
+      <span class="mark"></span>
+      <h1>사회적 출발선</h1>
+      <span class="role-tag">학생</span>
+    </div>
+    <div id="topbar-room" style="display:none;">
+      <span class="room-chip" id="room-code-chip">----</span>
+    </div>
+  </div>
+
+  <div class="main narrow" id="view-join">
+    <div class="panel">
+      <h2 class="section-title">방 입장하기</h2>
+      <div class="stack">
+        <div>
+          <label class="helper">방 번호</label>
+          <input type="text" id="join-code" placeholder="예: 1234" maxlength="4" inputmode="numeric" style="margin-top:6px;" />
+        </div>
+        <div>
+          <label class="helper">학번</label>
+          <input type="text" id="join-number" placeholder="예: 1234" inputmode="numeric" style="margin-top:6px;" />
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" id="btn-join">입장하기</button>
+        <div class="error-text" id="join-error"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main narrow" id="view-waiting" style="display:none;">
+    <div class="waiting-note panel">
+      <div class="big">입장 완료!</div>
+      <p>선생님이 활동을 시작할 때까지 잠시 기다려주세요.</p>
+      <p class="helper" style="margin-top:10px;">학번: <strong id="waiting-number"></strong></p>
+    </div>
+  </div>
+
+  <div class="main narrow" id="view-active" style="display:none;">
+
+    <!-- 1단계: 조건 확인 (활동 시작 직후 1회) -->
+    <div id="sub-intro">
+      <div class="condition-card intro">
+        <h3>나에게 배정된 조건</h3>
+        <div id="condition-list-intro"></div>
+      </div>
+      <button class="btn btn-primary btn-block btn-lg" id="btn-intro-continue" style="margin-top:16px;">
+        확인
+      </button>
+    </div>
+
+    <!-- 2단계: 질문 응답 -->
+    <div id="sub-question" style="display:none;">
+      <div class="row-between" style="margin-bottom:10px;">
+        <span class="q-index-student" id="q-index-label"></span>
+        <button class="btn btn-ghost btn-sm" id="btn-toggle-condition">내 조건 다시 보기</button>
+      </div>
+
+      <div class="condition-popover" id="condition-popover" style="display:none;">
+        <div class="condition-card compact">
+          <div id="condition-popover-list"></div>
+        </div>
+      </div>
+
+      <div class="panel question-panel">
+        <h2 class="big-question" id="q-text">질문을 기다리는 중...</h2>
+
+        <div class="choice-grid" id="choice-grid">
+          <button class="choice-btn" id="btn-choice-1">
+            <div class="c-label" id="label-1">선택지1</div>
+          </button>
+          <button class="choice-btn" id="btn-choice-2">
+            <div class="c-label" id="label-2">선택지2</div>
+          </button>
+        </div>
+
+        <button class="btn btn-primary btn-block btn-lg" id="btn-confirm-choice" style="margin-top:16px;" disabled>
+          확정하기
+        </button>
+
+        <div class="helper" id="answered-note" style="text-align:center; display:none; margin-top:10px;">
+          응답을 제출했습니다. 다음 질문을 기다려주세요.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main narrow" id="view-ended" style="display:none;">
+    <div class="panel">
+      <h2 class="section-title">활동이 끝났어요</h2>
+      <p class="helper">나의 최종 위치: <strong id="final-position" style="color:var(--track); font-size:1.2rem;"></strong></p>
+      <div class="divider"></div>
+      <div class="condition-card" id="final-condition-card">
+        <h3>내가 배정받았던 조건</h3>
+        <div id="final-condition-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="js/common.js"></script>
+<script src="js/student.js"></script>
+</body>
+</html>
