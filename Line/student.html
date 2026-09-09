@@ -63,18 +63,11 @@
 
     <!-- 2단계: 질문 응답 -->
     <div id="sub-question" style="display:none;">
-      <div class="row-between" style="margin-bottom:10px;">
-        <span class="q-index-student" id="q-index-label"></span>
-        <button class="btn btn-ghost btn-sm" id="btn-toggle-condition">내 조건 다시 보기</button>
-      </div>
+      <div class="condition-strip" id="condition-strip"></div>
 
-      <div class="condition-popover" id="condition-popover" style="display:none;">
-        <div class="condition-card compact">
-          <div id="condition-popover-list"></div>
-        </div>
-      </div>
+      <span class="q-index-student" id="q-index-label" style="color:var(--ink-soft); font-size:0.85rem;"></span>
 
-      <div class="panel question-panel">
+      <div class="panel question-panel" style="margin-top:8px;">
         <h2 class="big-question" id="q-text">질문을 기다리는 중...</h2>
 
         <div class="choice-grid" id="choice-grid">

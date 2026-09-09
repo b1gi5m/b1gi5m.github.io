@@ -247,6 +247,14 @@ input[type="text"]:focus { border-color: var(--track); }
   padding: 8px 0;
 }
 
+/* ---------- 질문 강조 블록 (교사 화면) ---------- */
+.question-block {
+  background: var(--track);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  padding: 18px 20px;
+}
+
 /* ---------- track visualization (수직: 위=앞으로, 아래=뒤로) ---------- */
 .track-wrap {
   margin-top: 20px;
@@ -359,13 +367,22 @@ input[type="text"]:focus { border-color: var(--track); }
 .condition-card.intro h3 { font-size: 1.15rem; margin-bottom: 16px; }
 .condition-card.intro .condition-item { font-size: 1.05rem; padding: 10px 0; }
 
-/* 질문 화면 중 "다시 보기" 팝오버 - 작고 눈에 덜 띄게 */
-.condition-card.compact { padding: 12px 14px; }
-.condition-card.compact h3 { display: none; }
-.condition-card.compact .condition-item { font-size: 0.85rem; padding: 4px 0; }
-.condition-popover { margin-bottom: 14px; }
-
-.btn-sm { padding: 7px 14px; font-size: 0.82rem; }
+/* 질문 화면에서 항상 보이는 조건 요약 줄 - 작고 눈에 덜 띄게, 클릭 없이 바로 확인 */
+.condition-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.condition-strip .cond-chip {
+  background: var(--track-dim);
+  color: var(--track);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
 
 /* ---------- 질문/응답 (student) - 여기에 시선이 집중되도록 크게 ---------- */
 .question-panel { padding: 26px 24px; }

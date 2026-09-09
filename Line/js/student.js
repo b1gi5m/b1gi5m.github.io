@@ -54,11 +54,6 @@ document.addEventListener('DOMContentLoaded', () => {
     renderFromState();
   });
 
-  on('btn-toggle-condition', 'click', () => {
-    const pop = document.getElementById('condition-popover');
-    pop.style.display = (pop.style.display === 'none' || !pop.style.display) ? '' : 'none';
-  });
-
   on('btn-choice-1', 'click', () => selectChoice('choice1'));
   on('btn-choice-2', 'click', () => selectChoice('choice2'));
   on('btn-confirm-choice', 'click', confirmChoice);
@@ -237,6 +232,18 @@ function renderConditionList(targetElId, conditions) {
   `).join('');
 }
 
+function renderConditionStrip(targetElId, conditions) {
+  const el = document.getElementById(targetElId);
+  const cats = Object.keys(conditions || {});
+  if (cats.length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML = cats.map(cat =>
+    `<span class="cond-chip">${escapeHtml(cat)} ${escapeHtml(conditions[cat])}</span>`
+  ).join('');
+}
+
 function describePosition(pos) {
   if (pos === 0) return '출발선';
   return pos > 0 ? `출발선보다 ${pos}칸 앞` : `출발선보다 ${Math.abs(pos)}칸 뒤`;
@@ -272,7 +279,7 @@ function showQuestion(state) {
   document.getElementById('sub-intro').style.display = 'none';
   document.getElementById('sub-question').style.display = '';
 
-  renderConditionList('condition-popover-list', state.me.conditions);
+  renderConditionStrip('condition-strip', state.me.conditions);
 
   const q = state.question;
   if (!q) {
