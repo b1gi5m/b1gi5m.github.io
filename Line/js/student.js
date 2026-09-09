@@ -104,15 +104,30 @@ function startJoin(roomCode, number, existingKey) {
   document.getElementById('waiting-number').textContent = number;
 
   connGeneration++; // 이전 연결/피어의 뒤늦은 이벤트를 모두 무효화
+  const myGen = connGeneration;
   if (myPeer) {
     try { myPeer.destroy(); } catch (e) {}
   }
   myPeer = new Peer();
 
-  myPeer.on('open', () => connectToHost());
+  // 피어 연결 자체가 성공도 실패도 하지 않고 그냥 멈춰버리는 경우(네트워크 차단 등)를
+  // 대비한 안전장치 - 일정 시간 안에 열리지 않으면 실패로 간주하고 재시도합니다.
+  const openTimeout = setTimeout(() => {
+    if (myGen !== connGeneration || shuttingDown) return;
+    console.warn('피어 연결이 시간 내에 열리지 않아 다시 시도합니다.');
+    try { myPeer.destroy(); } catch (e) {}
+    scheduleReconnect();
+  }, 9000);
+
+  myPeer.on('open', () => {
+    clearTimeout(openTimeout);
+    if (myGen !== connGeneration || shuttingDown) return;
+    connectToHost();
+  });
 
   myPeer.on('error', err => {
-    if (shuttingDown) return;
+    clearTimeout(openTimeout);
+    if (myGen !== connGeneration || shuttingDown) return;
     console.error('Peer error:', err);
     handleConnectFailure();
   });
@@ -127,7 +142,15 @@ function connectToHost() {
   const myGen = connGeneration;
   myConn = myPeer.connect(peerIdFor(myRoomCode), { reliable: true });
 
+  // 호스트와의 데이터 연결도 마찬가지로, 계속 멈춰있으면 재시도하도록 타임아웃을 둡니다.
+  const connOpenTimeout = setTimeout(() => {
+    if (myGen !== connGeneration || shuttingDown) return;
+    console.warn('호스트 연결이 시간 내에 열리지 않아 다시 시도합니다.');
+    scheduleReconnect();
+  }, 9000);
+
   myConn.on('open', () => {
+    clearTimeout(connOpenTimeout);
     if (myGen !== connGeneration || shuttingDown) return;
     reconnectAttempts = 0;
     myConn.send({ type: 'join', studentKey: myStudentKey, number: myNumber });
@@ -147,12 +170,14 @@ function connectToHost() {
   });
 
   myConn.on('close', () => {
+    clearTimeout(connOpenTimeout);
     if (myGen !== connGeneration || shuttingDown) return;
     stopHeartbeat();
     scheduleReconnect();
   });
 
   myConn.on('error', err => {
+    clearTimeout(connOpenTimeout);
     if (myGen !== connGeneration || shuttingDown) return;
     console.error('연결 오류:', err);
     stopHeartbeat();
