@@ -41,8 +41,8 @@ function setJoinError(msg) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  on('btn-gender-male', 'click', () => selectGender('남학생'));
-  on('btn-gender-female', 'click', () => selectGender('여학생'));
+  on('btn-gender-male', 'click', () => selectGender('남'));
+  on('btn-gender-female', 'click', () => selectGender('여'));
 
   on('btn-join', 'click', () => {
     const code = document.getElementById('join-code').value.trim();
@@ -93,8 +93,8 @@ function selectGender(g) {
   myGender = g;
   const maleBtn = document.getElementById('btn-gender-male');
   const femaleBtn = document.getElementById('btn-gender-female');
-  if (maleBtn) maleBtn.classList.toggle('selected', g === '남학생');
-  if (femaleBtn) femaleBtn.classList.toggle('selected', g === '여학생');
+  if (maleBtn) maleBtn.classList.toggle('selected', g === '남');
+  if (femaleBtn) femaleBtn.classList.toggle('selected', g === '여');
 }
 
 function leaveToJoinScreen() {
@@ -331,7 +331,7 @@ function renderNarrativeInto(targetElId, headingElId, state, headingPersona, hea
     return;
   }
   if (headingEl) headingEl.textContent = headingPersona;
-  el.innerHTML = buildFullNarrativeHtml(state.me.gender, state.me.persona.age, state.me.persona.narrative);
+  el.innerHTML = buildFullNarrativeHtml(state.me.gender, state.me.persona.age, state.me.persona.narrative, state.openingTemplate);
 }
 
 function renderFromState() {
@@ -373,7 +373,7 @@ function showQuestion(state) {
     stripEl.style.display = 'none';
   } else {
     stripEl.style.display = '';
-    stripEl.innerHTML = buildFullNarrativeHtml(state.me.gender, state.me.persona.age, state.me.persona.narrative);
+    stripEl.innerHTML = buildFullNarrativeHtml(state.me.gender, state.me.persona.age, state.me.persona.narrative, state.openingTemplate);
   }
 
   renderMyTrack('my-track', state.me.position || 0, state.otherPositions || []);
@@ -504,6 +504,6 @@ function renderEnded(state) {
   } else {
     cardEl.style.display = '';
     document.getElementById('final-condition-list').innerHTML =
-      buildFullNarrativeHtml(state.me.gender, state.me.persona.age, state.me.persona.narrative);
+      buildFullNarrativeHtml(state.me.gender, state.me.persona.age, state.me.persona.narrative, state.openingTemplate);
   }
 }

@@ -47,16 +47,22 @@ function shuffledCopy(arr) {
 }
 
 // ---------- 내러티브 렌더링 ----------
+// "나는 중학교에 재학 중인 {나이}살 {성별}학생이다." 형태의 문장 템플릿 (엑셀 settings 시트에서 교체 가능)
+const DEFAULT_OPENING_TEMPLATE = "나는 중학교에 재학 중인 {나이}살 {성별}학생이다.";
+
 // 엑셀에 **이렇게** 적은 부분을 <strong>으로 변환합니다.
 function parseBoldMarkup(text) {
   return escapeHtml(text || "").replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
 }
 
-// "나는 중학교에 재학 중인 15살 여학생이다. (내러티브 본문)" 형태의 완성 문장을 만듭니다.
-function buildFullNarrativeHtml(gender, age, narrativeRaw) {
-  const genderText = gender ? escapeHtml(gender) : "학생";
-  const ageText = age !== undefined && age !== null && age !== "" ? `<strong>${escapeHtml(String(age))}살</strong> ` : "";
-  const opening = `나는 중학교에 재학 중인 ${ageText}<strong>${genderText}</strong>이다.`;
+// 오프닝 문장 템플릿({나이}, {성별} 토큰 치환) + 내러티브 본문을 이어붙인 완성 문장을 만듭니다.
+function buildFullNarrativeHtml(gender, age, narrativeRaw, openingTemplate) {
+  const tpl = openingTemplate || DEFAULT_OPENING_TEMPLATE;
+  const genderText = gender || "학생";
+  const ageText = (age !== undefined && age !== null && age !== "") ? String(age) : "";
+  const opening = escapeHtml(tpl)
+    .replace(/\{나이\}/g, `<strong>${escapeHtml(ageText)}</strong>`)
+    .replace(/\{성별\}/g, `<strong>${escapeHtml(genderText)}</strong>`);
   const body = parseBoldMarkup(narrativeRaw || "");
   return body ? `${opening} ${body}` : opening;
 }
@@ -151,9 +157,11 @@ function clearStudentSession() {
 // ---------- 엑셀(xlsx) 파싱 ----------
 // personas 시트 : 나이 | 내러티브   (한 행 = 완성된 캐릭터 한 명, 중복 없이 학생 수만큼 배정됨)
 // questions 시트: 순서 | 질문내용 | 선택지1 | 선택지1칸수 | 선택지2 | 선택지2칸수
+// settings 시트 : 항목 | 값        (예: 오프닝문장 | 나는 중학교에 재학 중인 {나이}살 {성별}이다.)
 function parseConfigWorkbook(workbook) {
   const personaSheetName = workbook.SheetNames.find(n => n.trim() === "personas" || n.trim() === "페르소나") || workbook.SheetNames[0];
   const qSheetName = workbook.SheetNames.find(n => n.trim() === "questions" || n.trim() === "질문") || workbook.SheetNames[1];
+  const settingsSheetName = workbook.SheetNames.find(n => n.trim() === "settings" || n.trim() === "설정");
 
   const personas = [];
   if (personaSheetName) {
@@ -184,7 +192,19 @@ function parseConfigWorkbook(workbook) {
       .forEach(q => questions.push(q));
   }
 
-  return { personas, questions };
+  let openingTemplate = null;
+  if (settingsSheetName) {
+    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[settingsSheetName], { defval: "" });
+    rows.forEach(row => {
+      const key = String(row["항목"] || row["key"] || "").trim();
+      const val = row["값"] !== undefined ? row["값"] : row["value"];
+      if ((key === "오프닝문장" || key === "opening_template") && val) {
+        openingTemplate = String(val).trim();
+      }
+    });
+  }
+
+  return { personas, questions, openingTemplate };
 }
 
 function clampPosition(pos, min = -10, max = 10) {
