@@ -413,6 +413,13 @@ input[type="text"]:focus { border-color: var(--track); }
 .choice-btn .c-label { font-weight: 700; font-size: 1.2rem; }
 .choice-btn.selected { border-color: var(--track); background: var(--track-dim); }
 
+.condition-narrative {
+  font-size: 1.05rem;
+  line-height: 1.8;
+  color: var(--ink);
+}
+.condition-narrative strong { color: var(--track); }
+
 .waiting-note {
   text-align: center;
   padding: 40px 10px;

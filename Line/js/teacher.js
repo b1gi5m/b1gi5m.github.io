@@ -187,11 +187,14 @@ function handleStudentMessage(conn, msg) {
     if (!room.students[key]) {
       room.students[key] = {
         number: msg.number || key,
+        gender: msg.gender || null,
         joinedAt: Date.now(),
         conditions: {},
         position: 0,
         responses: {}
       };
+    } else if (msg.gender) {
+      room.students[key].gender = msg.gender;
     }
     persist();
     renderRoom();
@@ -224,6 +227,18 @@ function handleStudentMessage(conn, msg) {
   }
 }
 
+function computePercentile(key) {
+  const students = room.students || {};
+  const keys = Object.keys(students);
+  const total = keys.length;
+  if (total < 2) return null;
+  const myPos = students[key] ? (students[key].position || 0) : 0;
+  const better = keys.filter(k => (students[k].position || 0) > myPos).length;
+  const rank = better + 1;
+  const percentileFromTop = Math.max(1, Math.round((rank / total) * 100));
+  return { rank, total, percentileFromTop };
+}
+
 function buildStatePayload(key) {
   const student = room.students[key] || { number: key, conditions: {}, position: 0, responses: {} };
   const questions = (room.config && room.config.questions) || DEFAULT_QUESTIONS;
@@ -239,7 +254,8 @@ function buildStatePayload(key) {
       number: student.number,
       conditions: student.conditions || {},
       position: student.position || 0,
-      responses: student.responses || {}
+      responses: student.responses || {},
+      percentile: computePercentile(key)
     }
   };
 }
@@ -305,7 +321,7 @@ function startActivity() {
   const conditions = (room.config && room.config.conditions) || DEFAULT_CONDITIONS;
 
   Object.keys(students).forEach(key => {
-    students[key].conditions = assignRandomConditions(conditions);
+    students[key].conditions = assignConditionsForStudent(conditions, students[key].gender);
     students[key].position = 0;
     students[key].responses = {};
   });
@@ -337,21 +353,24 @@ function renderActive() {
   document.getElementById('progress-note').textContent = `${answered} / ${total}명 응답 완료`;
 }
 
-// 학생들의 현재 위치 격차가 좁을 때는 크게 벌려서, 격차가 넓어질수록 상대적으로
-// 덜 벌어지도록 만드는 "탄력적" 스케일. (0에 가까운 변화도 항상 도드라져 보이게)
-function computeDisplayExtent(students) {
-  const MAX_POS = 10;      // 이론상 최대 위치 (clampPosition 범위와 동일)
-  const MIN_WINDOW = 1.5;  // 학생들이 전부 같은 위치여도 최소한 이 정도는 벌려서 보여줌
-  const EXPONENT = 0.5;    // 1보다 작을수록 "좁을 때 더 과장" 효과가 커짐
+// 학생들의 실제 위치 범위(출발선 포함)를 트랙 전체 높이에 꽉 채워서 표시합니다.
+// 격차가 좁을 때는 그 좁은 범위가 화면 전체를 채우도록 "확대"되고, 격차가 벌어질수록
+// (이론상 최대치 -10~+10에 가까워질수록) 점점 실제 비율에 가깝게 자연스럽게 돌아옵니다.
+// 출발선(0)은 항상 범위 안에 포함시켜서, 0에 그대로 있는 학생이 있으면 그 위치가
+// 화면의 맨 위/아래 쪽으로 밀려나는 식으로 격차가 극대화되어 보입니다.
+function computeTrackRange(students) {
+  const MIN_WINDOW = 1.2; // 학생들이 전부 같은 위치(또는 격차 1칸)여도 화면을 거의 꽉 채워서 보여줌
 
-  let rawExtent = 0;
-  Object.keys(students || {}).forEach(k => {
-    const p = Math.abs(clampPosition(students[k].position || 0));
-    if (p > rawExtent) rawExtent = p;
-  });
+  const positions = Object.keys(students || {}).map(k => clampPosition(students[k].position || 0));
+  let min = Math.min(0, ...positions);
+  let max = Math.max(0, ...positions);
 
-  const t = Math.min(1, rawExtent / MAX_POS);
-  return MIN_WINDOW + (MAX_POS - MIN_WINDOW) * Math.pow(t, EXPONENT);
+  if (max - min < MIN_WINDOW) {
+    const mid = (max + min) / 2;
+    min = mid - MIN_WINDOW / 2;
+    max = mid + MIN_WINDOW / 2;
+  }
+  return { min, max };
 }
 
 function renderTrack(trackId, students, currentQuestionIndex, showStatus) {
@@ -361,14 +380,23 @@ function renderTrack(trackId, students, currentQuestionIndex, showStatus) {
 
   const keys = Object.keys(students || {}).sort(); // 매 렌더링마다 같은 순서 유지 -> 가로 위치 고정
   const n = keys.length;
-  const displayExtent = computeDisplayExtent(students);
+  const { min, max } = computeTrackRange(students);
+  const span = max - min;
+
+  const TOP_PCT = 10, BOTTOM_PCT = 90; // 위/아래 여백
+  function yForPos(pos) {
+    const normalized = (pos - min) / span; // 0(최저)~1(최고)
+    return BOTTOM_PCT - normalized * (BOTTOM_PCT - TOP_PCT);
+  }
+
+  const baseline = track.querySelector('.baseline');
+  if (baseline) baseline.style.top = yForPos(0) + '%';
 
   keys.forEach((key, i) => {
     const student = students[key];
     const pos = clampPosition(student.position || 0);
     const xPct = n <= 1 ? 50 : (8 + (i / (n - 1)) * 84);
-    const normalized = displayExtent > 0 ? pos / displayExtent : 0;
-    const yPct = 50 - normalized * 42;
+    const yPct = yForPos(pos);
 
     const answered = showStatus && currentQuestionIndex >= 0 && student.responses && student.responses[currentQuestionIndex];
     const dot = document.createElement('div');

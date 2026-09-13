@@ -7,6 +7,7 @@ let myConn = null;
 let myRoomCode = null;
 let myStudentKey = null;
 let myNumber = null;
+let myGender = null;       // 학생이 직접 입력한 성별 (무작위 아님)
 let lastState = null;      // 호스트로부터 마지막으로 받은 상태
 let reconnectAttempts = 0;
 let reconnectTimer = null;
@@ -40,14 +41,20 @@ function setJoinError(msg) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  on('btn-gender-male', 'click', () => selectGender('남학생'));
+  on('btn-gender-female', 'click', () => selectGender('여학생'));
+
   on('btn-join', 'click', () => {
     const code = document.getElementById('join-code').value.trim();
     const number = document.getElementById('join-number').value.trim();
     setJoinError('');
     if (!/^\d{4}$/.test(code)) { setJoinError('방 번호 4자리를 정확히 입력해주세요.'); return; }
     if (!number) { setJoinError('학번을 입력해주세요.'); return; }
-    startJoin(code, number);
+    if (!myGender) { setJoinError('성별을 선택해주세요.'); return; }
+    startJoin(code, number, null, myGender);
   });
+
+  on('btn-leave-waiting', 'click', leaveToJoinScreen);
 
   on('btn-intro-continue', 'click', () => {
     if (lastState) introSeenForTs = lastState.activityStartedAt;
@@ -77,22 +84,53 @@ document.addEventListener('DOMContentLoaded', () => {
   if (saved && saved.roomCode && saved.studentKey) {
     document.getElementById('join-code').value = saved.roomCode;
     document.getElementById('join-number').value = saved.number || '';
-    startJoin(saved.roomCode, saved.number || saved.studentKey, saved.studentKey);
+    if (saved.gender) selectGender(saved.gender);
+    startJoin(saved.roomCode, saved.number || saved.studentKey, saved.studentKey, saved.gender);
   }
 });
+
+function selectGender(g) {
+  myGender = g;
+  const maleBtn = document.getElementById('btn-gender-male');
+  const femaleBtn = document.getElementById('btn-gender-female');
+  if (maleBtn) maleBtn.classList.toggle('selected', g === '남학생');
+  if (femaleBtn) femaleBtn.classList.toggle('selected', g === '여학생');
+}
+
+function leaveToJoinScreen() {
+  shuttingDown = true;
+  connGeneration++;
+  stopHeartbeat();
+  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+  if (myConn) { try { myConn.close(); } catch (e) {} }
+  if (myPeer) { try { myPeer.destroy(); } catch (e) {} }
+  myConn = null;
+  myPeer = null;
+  myRoomCode = null;
+  myStudentKey = null;
+  myNumber = null;
+  clearStudentSession();
+  lastState = null;
+  document.getElementById('join-code').value = '';
+  document.getElementById('join-number').value = '';
+  setJoinError('');
+  showView('join');
+  shuttingDown = false; // 다시 정상적으로 입장할 수 있도록 원복
+}
 
 function handleBecameVisible() {
   if (shuttingDown) return;
   if (!myRoomCode || !myStudentKey) return; // 아직 입장 전이면 할 일 없음
   reconnectAttempts = 0;
-  startJoin(myRoomCode, myNumber, myStudentKey);
+  startJoin(myRoomCode, myNumber, myStudentKey, myGender);
 }
 
-function startJoin(roomCode, number, existingKey) {
+function startJoin(roomCode, number, existingKey, gender) {
   shuttingDown = false;
   myRoomCode = roomCode;
   myNumber = number;
   myStudentKey = existingKey || sanitizeKey(number);
+  if (gender) myGender = gender;
   reconnectAttempts = 0;
   introSeenForTs = null;
   lastRenderedQuestionIndex = null;
@@ -153,8 +191,8 @@ function connectToHost() {
     clearTimeout(connOpenTimeout);
     if (myGen !== connGeneration || shuttingDown) return;
     reconnectAttempts = 0;
-    myConn.send({ type: 'join', studentKey: myStudentKey, number: myNumber });
-    saveStudentSession(myRoomCode, myStudentKey, myNumber);
+    myConn.send({ type: 'join', studentKey: myStudentKey, number: myNumber, gender: myGender });
+    saveStudentSession(myRoomCode, myStudentKey, myNumber, myGender);
     startHeartbeat();
   });
 
@@ -194,7 +232,7 @@ function startHeartbeat() {
     if (shuttingDown || myGen !== connGeneration || !myConn) return;
     try {
       if (!myConn.open) throw new Error('connection not open');
-      myConn.send({ type: 'requestState', studentKey: myStudentKey, number: myNumber });
+      myConn.send({ type: 'requestState', studentKey: myStudentKey, number: myNumber, gender: myGender });
     } catch (e) {
       console.warn('하트비트 전송 실패 - 연결이 끊어진 것으로 간주합니다.', e);
       stopHeartbeat();
@@ -259,19 +297,16 @@ function scheduleReconnect() {
   }, delay);
 }
 
-function renderConditionList(targetElId, conditions) {
+// 조건을 표가 아니라 하나의 문장으로 이어붙여서 보여줍니다. (핵심 키워드는 볼드)
+function renderConditionNarrative(targetElId, conditions) {
   const el = document.getElementById(targetElId);
-  const cats = Object.keys(conditions || {});
-  if (cats.length === 0) {
-    el.innerHTML = '<div class="empty-note">아직 배정된 조건이 없습니다</div>';
+  const vals = Object.values(conditions || {});
+  if (vals.length === 0) {
+    el.innerHTML = '<span class="empty-note">아직 배정된 조건이 없습니다</span>';
     return;
   }
-  el.innerHTML = cats.map(cat => `
-    <div class="condition-item">
-      <span class="cat">${escapeHtml(cat)}</span>
-      <span class="val">${escapeHtml(conditions[cat])}</span>
-    </div>
-  `).join('');
+  const bolded = vals.map(v => `<strong>${escapeHtml(v)}</strong>`);
+  el.innerHTML = bolded.join(', ') + ' 학생입니다.';
 }
 
 function renderConditionStrip(targetElId, conditions) {
@@ -314,7 +349,7 @@ function renderFromState() {
 function showIntro(state) {
   document.getElementById('sub-intro').style.display = '';
   document.getElementById('sub-question').style.display = 'none';
-  renderConditionList('condition-list-intro', state.me.conditions);
+  renderConditionNarrative('condition-list-intro', state.me.conditions);
 }
 
 function showQuestion(state) {
@@ -400,5 +435,14 @@ function submitChoice(choice) {
 
 function renderEnded(state) {
   document.getElementById('final-position').textContent = describePosition(state.me.position || 0);
-  renderConditionList('final-condition-list', state.me.conditions);
+  renderConditionNarrative('final-condition-list', state.me.conditions);
+
+  const p = state.me.percentile;
+  const el = document.getElementById('final-percentile');
+  if (p) {
+    el.textContent = `우리 반 ${p.total}명 중 상위 ${p.percentileFromTop}% (앞에서 ${p.rank}번째)`;
+    el.style.display = '';
+  } else {
+    el.style.display = 'none';
+  }
 }

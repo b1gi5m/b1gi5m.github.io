@@ -4,14 +4,15 @@
    ============================================================ */
 
 // 엑셀을 업로드하지 않았을 때 사용할 기본 예시 데이터
+// (선택지는 표가 아니라 문장으로 이어붙여지므로, 되도록 "~하는", "~할 수 있는"처럼
+//  형용사형으로 끝나거나 "비장애인"처럼 명사형으로 자연스럽게 문장이 되도록 작성합니다)
 const DEFAULT_CONDITIONS = [
-  { category: "나이", options: ["13세", "14세", "15세"] },
-  { category: "성별", options: ["남성", "여성"] },
-  { category: "이주배경", options: ["없음", "다문화가정", "중도입국가정", "새터민가정"] },
-  { category: "부모의 경제적 상황", options: ["상", "중", "하"] },
-  { category: "장애 여부", options: ["없음", "신체적 장애", "발달 장애"] },
-  { category: "출신 지역", options: ["대도시", "중소도시", "농어촌", "해외"] },
-  { category: "기타 조건", options: ["한부모가정", "조손가정", "다자녀가정", "해당없음"] }
+  { category: "주거 형태", options: ["서울 대단지 아파트에 거주하는", "지방 소도시 다세대주택에 거주하는", "농어촌 마을에 거주하는", "해외에서 거주하다 최근 귀국한"] },
+  { category: "경제적 상황", options: ["방학마다 해외여행을 갈 수 있는", "필요한 물건은 대부분 살 수 있는", "형편이 어려워 아르바이트를 해야 하는"] },
+  { category: "학원/방과후", options: ["원하는 학원을 마음껏 다닐 수 있는", "형편에 맞춰 학원을 골라야 하는", "학원을 거의 다니지 못하는"] },
+  { category: "장애 여부", options: ["비장애인", "신체적 장애가 있는", "발달 장애가 있는"] },
+  { category: "가족 형태", options: ["부모님과 함께 사는", "한부모 가정에서 자란", "조부모님과 함께 사는"] },
+  { category: "이주배경", options: ["이주배경이 없는", "다문화가정에서 자란", "새터민 가정 출신인"] }
 ];
 
 const DEFAULT_QUESTIONS = [
@@ -37,10 +38,15 @@ function sanitizeKey(raw) {
   return String(raw).trim().replace(/[^a-zA-Z0-9가-힣_-]/g, "_");
 }
 
-// ---------- 조건 무작위 배정 ----------
-function assignRandomConditions(conditionsConfig) {
+// ---------- 조건 배정 ----------
+// 성별은 학생이 입장할 때 직접 입력한 값을 그대로 사용하고(무작위 아님),
+// 나이는 조건에서 아예 제외합니다. 나머지 항목만 엑셀 설정에서 무작위로 배정합니다.
+// 혹시 엑셀에 "성별"이나 "나이" 항목이 남아있어도 무시합니다(자기 입력 값과 충돌 방지).
+function assignConditionsForStudent(conditionsConfig, gender) {
   const result = {};
+  if (gender) result["성별"] = gender;
   (conditionsConfig || []).forEach(cond => {
+    if (cond.category === "성별" || cond.category === "나이") return;
     const options = cond.options || [];
     if (options.length === 0) return;
     const pick = options[Math.floor(Math.random() * options.length)];
@@ -77,8 +83,8 @@ function loadLastTeacherCode() {
 
 // ---------- 로컬스토리지 : 학생 쪽 세션(새로고침/재접속 복구용) ----------
 const LS_STUDENT_KEY = "ssl_student_session";
-function saveStudentSession(roomCode, studentKey, number) {
-  localStorage.setItem(LS_STUDENT_KEY, JSON.stringify({ roomCode, studentKey, number }));
+function saveStudentSession(roomCode, studentKey, number, gender) {
+  localStorage.setItem(LS_STUDENT_KEY, JSON.stringify({ roomCode, studentKey, number, gender }));
 }
 function loadStudentSession() {
   try {
