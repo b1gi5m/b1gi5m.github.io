@@ -204,6 +204,8 @@ function connectToHost() {
       renderFromState();
     } else if (msg.type === 'roomDeleted') {
       handleRoomDeleted();
+    } else if (msg.type === 'roomFull') {
+      handleRoomFull(msg.maxStudents);
     }
   });
 
@@ -272,6 +274,22 @@ function handleRoomDeleted() {
   setJoinError('선생님이 활동방을 종료했습니다. 새로 입장해주세요.');
 }
 
+function handleRoomFull(max) {
+  shuttingDown = true;
+  connGeneration++;
+  stopHeartbeat();
+  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+  if (myConn) { try { myConn.close(); } catch (e) {} }
+  if (myPeer) { try { myPeer.destroy(); } catch (e) {} }
+  myConn = null;
+  myPeer = null;
+  clearStudentSession();
+  lastState = null;
+  showView('join');
+  setJoinError(`이 방은 정원(최대 ${max || '?'}명)이 가득 찼습니다. 선생님께 문의해주세요.`);
+  shuttingDown = false;
+}
+
 function scheduleReconnect() {
   if (shuttingDown) return;
   stopHeartbeat();
@@ -292,38 +310,28 @@ function scheduleReconnect() {
     if (myPeer && !myPeer.destroyed) {
       connectToHost();
     } else {
-      startJoin(myRoomCode, myNumber, myStudentKey);
+      startJoin(myRoomCode, myNumber, myStudentKey, myGender);
     }
   }, delay);
-}
-
-// 조건을 표가 아니라 하나의 문장으로 이어붙여서 보여줍니다. (핵심 키워드는 볼드)
-function renderConditionNarrative(targetElId, conditions) {
-  const el = document.getElementById(targetElId);
-  const vals = Object.values(conditions || {});
-  if (vals.length === 0) {
-    el.innerHTML = '<span class="empty-note">아직 배정된 조건이 없습니다</span>';
-    return;
-  }
-  const bolded = vals.map(v => `<strong>${escapeHtml(v)}</strong>`);
-  el.innerHTML = bolded.join(', ') + ' 학생입니다.';
-}
-
-function renderConditionStrip(targetElId, conditions) {
-  const el = document.getElementById(targetElId);
-  const cats = Object.keys(conditions || {});
-  if (cats.length === 0) {
-    el.innerHTML = '';
-    return;
-  }
-  el.innerHTML = cats.map(cat =>
-    `<span class="cond-chip">${escapeHtml(cat)} ${escapeHtml(conditions[cat])}</span>`
-  ).join('');
 }
 
 function describePosition(pos) {
   if (pos === 0) return '출발선';
   return pos > 0 ? `출발선보다 ${pos}칸 앞` : `출발선보다 ${Math.abs(pos)}칸 뒤`;
+}
+
+// 페르소나 모드면 완성된 캐릭터 문장을, 실제 조건 모드면 안내 문구를 보여줍니다.
+function renderNarrativeInto(targetElId, headingElId, state, headingPersona, headingSelf, bodySelf) {
+  const el = document.getElementById(targetElId);
+  const headingEl = headingElId ? document.getElementById(headingElId) : null;
+
+  if (state.mode === 'self' || !state.me.persona) {
+    if (headingEl) headingEl.textContent = headingSelf;
+    el.innerHTML = bodySelf;
+    return;
+  }
+  if (headingEl) headingEl.textContent = headingPersona;
+  el.innerHTML = buildFullNarrativeHtml(state.me.gender, state.me.persona.age, state.me.persona.narrative);
 }
 
 function renderFromState() {
@@ -349,14 +357,26 @@ function renderFromState() {
 function showIntro(state) {
   document.getElementById('sub-intro').style.display = '';
   document.getElementById('sub-question').style.display = 'none';
-  renderConditionNarrative('condition-list-intro', state.me.conditions);
+  renderNarrativeInto(
+    'condition-list-intro', 'intro-heading', state,
+    '나에게 배정된 조건', '이번 활동 방식 안내',
+    '이번 활동은 무작위로 배정된 조건이 아니라, <strong>여러분 자신의 실제 상황</strong>을 기준으로 진행합니다. 각 질문을 읽고 스스로에게 해당하는지 생각해서 답해주세요.'
+  );
 }
 
 function showQuestion(state) {
   document.getElementById('sub-intro').style.display = 'none';
   document.getElementById('sub-question').style.display = '';
 
-  renderConditionStrip('condition-strip', state.me.conditions);
+  const stripEl = document.getElementById('condition-strip');
+  if (state.mode === 'self' || !state.me.persona) {
+    stripEl.style.display = 'none';
+  } else {
+    stripEl.style.display = '';
+    stripEl.innerHTML = buildFullNarrativeHtml(state.me.gender, state.me.persona.age, state.me.persona.narrative);
+  }
+
+  renderMyTrack('my-track', state.me.position || 0, state.otherPositions || []);
 
   const q = state.question;
   if (!q) {
@@ -406,6 +426,37 @@ function showQuestion(state) {
   }
 }
 
+// 학생 본인 화면의 "내 위치" 트랙. 다른 학생은 익명 점으로만 표시하고
+// (호버 등 상세정보 없음), 내 위치는 항상 뚜렷하게 표시됩니다.
+function renderMyTrack(trackId, myPosition, otherPositions) {
+  const track = document.getElementById(trackId);
+  if (!track) return;
+  track.querySelectorAll('.student-dot').forEach(el => el.remove());
+
+  const myPos = clampPosition(myPosition || 0);
+  const others = (otherPositions || []).map(p => clampPosition(p || 0));
+  const range = computeTrackRange(others.concat([myPos]));
+
+  const baseline = track.querySelector('.baseline');
+  if (baseline) baseline.style.top = yPctForPos(0, range) + '%';
+
+  const n = others.length;
+  others.forEach((pos, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'student-dot other';
+    dot.style.left = xPctForIndex(i, n) + '%';
+    dot.style.top = yPctForPos(pos, range) + '%';
+    track.appendChild(dot);
+  });
+
+  const meDot = document.createElement('div');
+  meDot.className = 'student-dot me';
+  meDot.style.left = '50%';
+  meDot.style.top = yPctForPos(myPos, range) + '%';
+  meDot.textContent = '나';
+  track.appendChild(meDot);
+}
+
 function selectChoice(choice) {
   if (!lastState || lastState.status !== 'active') return;
   const idx = lastState.questionIndex;
@@ -435,14 +486,24 @@ function submitChoice(choice) {
 
 function renderEnded(state) {
   document.getElementById('final-position').textContent = describePosition(state.me.position || 0);
-  renderConditionNarrative('final-condition-list', state.me.conditions);
 
   const p = state.me.percentile;
-  const el = document.getElementById('final-percentile');
+  const pEl = document.getElementById('final-percentile');
   if (p) {
-    el.textContent = `우리 반 ${p.total}명 중 상위 ${p.percentileFromTop}% (앞에서 ${p.rank}번째)`;
-    el.style.display = '';
+    pEl.textContent = `우리 반 ${p.total}명 중 상위 ${p.percentileFromTop}% (앞에서 ${p.rank}번째)`;
+    pEl.style.display = '';
   } else {
-    el.style.display = 'none';
+    pEl.style.display = 'none';
+  }
+
+  renderMyTrack('my-track-ended', state.me.position || 0, state.otherPositions || []);
+
+  const cardEl = document.getElementById('final-condition-card');
+  if (state.mode === 'self' || !state.me.persona) {
+    cardEl.style.display = 'none';
+  } else {
+    cardEl.style.display = '';
+    document.getElementById('final-condition-list').innerHTML =
+      buildFullNarrativeHtml(state.me.gender, state.me.persona.age, state.me.persona.narrative);
   }
 }

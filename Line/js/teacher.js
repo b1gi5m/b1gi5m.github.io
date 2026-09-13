@@ -21,6 +21,11 @@ function hashCode(str) {
   return h;
 }
 
+// 학생 공 색깔은 학번(키)의 해시로만 정해집니다 - 성별과는 전혀 무관합니다.
+function colorForKey(key) {
+  return DOT_COLORS[Math.abs(hashCode(key)) % DOT_COLORS.length];
+}
+
 function showView(name) {
   ['create', 'waiting', 'active', 'ended'].forEach(v => {
     document.getElementById('view-' + v).style.display = (v === name) ? '' : 'none';
@@ -78,13 +83,18 @@ async function loadConfigFromFile() {
     const workbook = XLSX.read(new Uint8Array(buf), { type: 'array' });
     const parsed = parseConfigWorkbook(workbook);
     return {
-      conditions: parsed.conditions.length ? parsed.conditions : DEFAULT_CONDITIONS,
+      personas: parsed.personas.length ? parsed.personas : DEFAULT_PERSONAS,
       questions: parsed.questions.length ? parsed.questions : DEFAULT_QUESTIONS
     };
   } catch (e) {
     console.warn('config.xlsx 를 불러오지 못해 기본 예시 데이터를 사용합니다.', e);
-    return { conditions: DEFAULT_CONDITIONS, questions: DEFAULT_QUESTIONS };
+    return { personas: DEFAULT_PERSONAS, questions: DEFAULT_QUESTIONS };
   }
+}
+
+function maxStudentsFor(cfg) {
+  const personas = (cfg && cfg.personas) || DEFAULT_PERSONAS;
+  return personas.length || DEFAULT_PERSONAS.length;
 }
 
 // ---------- 방 생성 / 재입장 ----------
@@ -97,6 +107,7 @@ async function createRoom(attemptsLeft) {
     status: 'waiting',
     createdAt: Date.now(),
     currentQuestionIndex: -1,
+    mode: 'persona', // 'persona' | 'self'
     config: config,
     students: {}
   };
@@ -117,6 +128,7 @@ function rejoinRoom() {
     return;
   }
   room = saved;
+  if (!room.mode) room.mode = 'persona';
   hostRoom(raw, { isNewRoom: false });
 }
 
@@ -181,15 +193,25 @@ function handleStudentMessage(conn, msg) {
 
   if (msg.type === 'join' || msg.type === 'requestState') {
     const key = sanitizeKey(msg.studentKey || msg.number);
+    const isNewStudent = !room.students[key];
+
+    if (isNewStudent) {
+      const max = maxStudentsFor(room.config);
+      if (Object.keys(room.students).length >= max) {
+        if (conn.open) conn.send({ type: 'roomFull', maxStudents: max });
+        return;
+      }
+    }
+
     conn.studentKey = key;
     liveConnections[key] = conn;
 
-    if (!room.students[key]) {
+    if (isNewStudent) {
       room.students[key] = {
         number: msg.number || key,
         gender: msg.gender || null,
         joinedAt: Date.now(),
-        conditions: {},
+        persona: null,
         position: 0,
         responses: {}
       };
@@ -223,7 +245,7 @@ function handleStudentMessage(conn, msg) {
 
     persist();
     renderRoom();
-    sendStateTo(key);
+    broadcastAll(); // 다른 학생들의 "내 위치" 트랙에도 반영되도록 전체에 재전송
   }
 }
 
@@ -240,23 +262,31 @@ function computePercentile(key) {
 }
 
 function buildStatePayload(key) {
-  const student = room.students[key] || { number: key, conditions: {}, position: 0, responses: {} };
+  const students = room.students || {};
+  const student = students[key] || { number: key, persona: null, position: 0, responses: {} };
   const questions = (room.config && room.config.questions) || DEFAULT_QUESTIONS;
   const idx = room.currentQuestionIndex;
+  const otherPositions = Object.keys(students)
+    .filter(k => k !== key)
+    .map(k => students[k].position || 0);
+
   return {
     type: 'state',
     status: room.status,
+    mode: room.mode || 'persona',
     questionIndex: idx,
     totalQuestions: questions.length,
     question: questions[idx] || null,
     activityStartedAt: room.activityStartedAt || null,
     me: {
       number: student.number,
-      conditions: student.conditions || {},
+      gender: student.gender || null,
+      persona: student.persona || null,
       position: student.position || 0,
       responses: student.responses || {},
       percentile: computePercentile(key)
-    }
+    },
+    otherPositions: otherPositions
   };
 }
 
@@ -297,7 +327,8 @@ function renderRoom() {
 function renderWaiting() {
   const students = room.students || {};
   const keys = Object.keys(students);
-  document.getElementById('student-count').textContent = keys.length;
+  const max = maxStudentsFor(room.config);
+  document.getElementById('student-count').textContent = `${keys.length} / ${max}`;
 
   const grid = document.getElementById('roster-grid');
   if (keys.length === 0) {
@@ -311,17 +342,32 @@ function renderWaiting() {
 
   document.getElementById('btn-start-activity').disabled = keys.length === 0;
 
-  const cfg = room.config || { conditions: [], questions: [] };
+  const cfg = room.config || { personas: [], questions: [] };
   document.getElementById('config-status').textContent =
-    `조건 ${(cfg.conditions || []).length}개 · 질문 ${(cfg.questions || []).length}개 불러옴`;
+    `페르소나 ${(cfg.personas || []).length}개(정원) · 질문 ${(cfg.questions || []).length}개 불러옴`;
+
+  const modeToggle = document.getElementById('toggle-self-mode');
+  if (modeToggle) modeToggle.checked = room.mode === 'self';
 }
 
 function startActivity() {
   const students = room.students || {};
-  const conditions = (room.config && room.config.conditions) || DEFAULT_CONDITIONS;
+  const keys = Object.keys(students);
 
-  Object.keys(students).forEach(key => {
-    students[key].conditions = assignConditionsForStudent(conditions, students[key].gender);
+  const modeToggle = document.getElementById('toggle-self-mode');
+  room.mode = (modeToggle && modeToggle.checked) ? 'self' : 'persona';
+
+  if (room.mode === 'persona') {
+    const personas = (room.config && room.config.personas && room.config.personas.length) ? room.config.personas : DEFAULT_PERSONAS;
+    const shuffled = shuffledCopy(personas);
+    keys.forEach((key, i) => {
+      students[key].persona = shuffled[i % shuffled.length];
+    });
+  } else {
+    keys.forEach(key => { students[key].persona = null; });
+  }
+
+  keys.forEach(key => {
     students[key].position = 0;
     students[key].responses = {};
   });
@@ -353,26 +399,6 @@ function renderActive() {
   document.getElementById('progress-note').textContent = `${answered} / ${total}명 응답 완료`;
 }
 
-// 학생들의 실제 위치 범위(출발선 포함)를 트랙 전체 높이에 꽉 채워서 표시합니다.
-// 격차가 좁을 때는 그 좁은 범위가 화면 전체를 채우도록 "확대"되고, 격차가 벌어질수록
-// (이론상 최대치 -10~+10에 가까워질수록) 점점 실제 비율에 가깝게 자연스럽게 돌아옵니다.
-// 출발선(0)은 항상 범위 안에 포함시켜서, 0에 그대로 있는 학생이 있으면 그 위치가
-// 화면의 맨 위/아래 쪽으로 밀려나는 식으로 격차가 극대화되어 보입니다.
-function computeTrackRange(students) {
-  const MIN_WINDOW = 1.2; // 학생들이 전부 같은 위치(또는 격차 1칸)여도 화면을 거의 꽉 채워서 보여줌
-
-  const positions = Object.keys(students || {}).map(k => clampPosition(students[k].position || 0));
-  let min = Math.min(0, ...positions);
-  let max = Math.max(0, ...positions);
-
-  if (max - min < MIN_WINDOW) {
-    const mid = (max + min) / 2;
-    min = mid - MIN_WINDOW / 2;
-    max = mid + MIN_WINDOW / 2;
-  }
-  return { min, max };
-}
-
 function renderTrack(trackId, students, currentQuestionIndex, showStatus) {
   const track = document.getElementById(trackId);
   if (!track) return;
@@ -380,33 +406,31 @@ function renderTrack(trackId, students, currentQuestionIndex, showStatus) {
 
   const keys = Object.keys(students || {}).sort(); // 매 렌더링마다 같은 순서 유지 -> 가로 위치 고정
   const n = keys.length;
-  const { min, max } = computeTrackRange(students);
-  const span = max - min;
-
-  const TOP_PCT = 10, BOTTOM_PCT = 90; // 위/아래 여백
-  function yForPos(pos) {
-    const normalized = (pos - min) / span; // 0(최저)~1(최고)
-    return BOTTOM_PCT - normalized * (BOTTOM_PCT - TOP_PCT);
-  }
+  const positions = keys.map(k => clampPosition(students[k].position || 0));
+  const range = computeTrackRange(positions);
 
   const baseline = track.querySelector('.baseline');
-  if (baseline) baseline.style.top = yForPos(0) + '%';
+  if (baseline) baseline.style.top = yPctForPos(0, range) + '%';
+
+  const anonymized = room.mode === 'self'; // 실제 조건 모드에서는 학번/조건을 아예 숨김
 
   keys.forEach((key, i) => {
     const student = students[key];
     const pos = clampPosition(student.position || 0);
-    const xPct = n <= 1 ? 50 : (8 + (i / (n - 1)) * 84);
-    const yPct = yForPos(pos);
+    const xPct = xPctForIndex(i, n);
+    const yPct = yPctForPos(pos, range);
 
     const answered = showStatus && currentQuestionIndex >= 0 && student.responses && student.responses[currentQuestionIndex];
     const dot = document.createElement('div');
     dot.className = 'student-dot' + (showStatus ? (answered ? ' answered' : ' pending') : '');
     dot.style.left = xPct + '%';
     dot.style.top = yPct + '%';
-    dot.style.background = DOT_COLORS[Math.abs(hashCode(key)) % DOT_COLORS.length];
-    dot.addEventListener('mouseenter', e => showTooltip(e, student));
-    dot.addEventListener('mousemove', moveTooltip);
-    dot.addEventListener('mouseleave', hideTooltip);
+    dot.style.background = colorForKey(key);
+    if (!anonymized) {
+      dot.addEventListener('mouseenter', e => showTooltip(e, student));
+      dot.addEventListener('mousemove', moveTooltip);
+      dot.addEventListener('mouseleave', hideTooltip);
+    }
     track.appendChild(dot);
   });
 }
@@ -429,9 +453,10 @@ function renderStatusLists(students, currentQuestionIndex) {
 
 function showTooltip(e, student) {
   const tip = document.getElementById('tooltip');
-  const conditions = student.conditions || {};
-  const rows = Object.keys(conditions).map(c => `${escapeHtml(c)}: <strong>${escapeHtml(conditions[c])}</strong>`).join('<br/>');
-  tip.innerHTML = `<div class="t-title">학번 ${escapeHtml(student.number || '')}</div>${rows || '조건 미배정'}`;
+  const narrativeHtml = student.persona
+    ? buildFullNarrativeHtml(student.gender, student.persona.age, student.persona.narrative)
+    : '조건 미배정';
+  tip.innerHTML = `<div class="t-title">학번 ${escapeHtml(student.number || '')}</div>${narrativeHtml}`;
   tip.style.display = 'block';
   moveTooltip(e);
 }

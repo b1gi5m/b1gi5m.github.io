@@ -35,13 +35,13 @@
           <input type="text" id="join-number" placeholder="예: 1234" inputmode="numeric" style="margin-top:6px;" />
         </div>
         <div>
-          <label class="helper">성별</label>
-          <div style="margin-top:6px; display:flex; gap:10px;">
-            <button type="button" class="choice-btn gender-btn" id="btn-gender-male" style="padding:14px 10px;">
-              <div class="c-label">남학생</div>
+          <label class="helper" style="display:block; text-align:center;">성별</label>
+          <div style="margin-top:6px; display:flex; gap:14px; justify-content:center;">
+            <button type="button" class="choice-btn gender-btn" id="btn-gender-male" style="padding:14px 0; width:84px;">
+              <div class="c-label">남</div>
             </button>
-            <button type="button" class="choice-btn gender-btn" id="btn-gender-female" style="padding:14px 10px;">
-              <div class="c-label">여학생</div>
+            <button type="button" class="choice-btn gender-btn" id="btn-gender-female" style="padding:14px 0; width:84px;">
+              <div class="c-label">여</div>
             </button>
           </div>
         </div>
@@ -60,12 +60,12 @@
     </div>
   </div>
 
-  <div class="main narrow" id="view-active" style="display:none;">
+  <div class="main wide" id="view-active" style="display:none;">
 
     <!-- 1단계: 조건 확인 (활동 시작 직후 1회) -->
     <div id="sub-intro">
       <div class="condition-card intro">
-        <h3>나에게 배정된 조건</h3>
+        <h3 id="intro-heading">나에게 배정된 조건</h3>
         <p id="condition-list-intro" class="condition-narrative"></p>
       </div>
       <button class="btn btn-primary btn-block btn-lg" id="btn-intro-continue" style="margin-top:16px;">
@@ -76,6 +76,13 @@
     <!-- 2단계: 질문 응답 -->
     <div id="sub-question" style="display:none;">
       <div class="condition-strip" id="condition-strip"></div>
+
+      <div class="track-wrap my-track-wrap">
+        <div class="helper" style="margin-bottom:8px;">우리 반에서 나의 위치</div>
+        <div class="track" id="my-track">
+          <div class="baseline"></div>
+        </div>
+      </div>
 
       <span class="q-index-student" id="q-index-label" style="color:var(--ink-soft); font-size:0.85rem;"></span>
 
@@ -102,16 +109,23 @@
     </div>
   </div>
 
-  <div class="main narrow" id="view-ended" style="display:none;">
+  <div class="main wide" id="view-ended" style="display:none;">
     <div class="panel">
       <h2 class="section-title">활동이 끝났어요</h2>
       <p class="helper">나의 최종 위치: <strong id="final-position" style="color:var(--track); font-size:1.2rem;"></strong></p>
       <p class="helper" id="final-percentile" style="margin-top:4px; display:none;"></p>
-      <div class="divider"></div>
-      <div class="condition-card" id="final-condition-card">
-        <h3>내가 배정받았던 조건</h3>
-        <p id="final-condition-list" class="condition-narrative"></p>
+    </div>
+
+    <div class="track-wrap my-track-wrap">
+      <div class="helper" style="margin-bottom:8px;">우리 반에서 나의 최종 위치</div>
+      <div class="track" id="my-track-ended">
+        <div class="baseline"></div>
       </div>
+    </div>
+
+    <div class="panel" id="final-condition-card" style="margin-top:18px;">
+      <h3>내가 배정받았던 조건</h3>
+      <p id="final-condition-list" class="condition-narrative"></p>
     </div>
   </div>
 </div>

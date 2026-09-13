@@ -126,6 +126,7 @@ input[type="text"]:focus { border-color: var(--track); }
 }
 
 .narrow { max-width: 480px; }
+.wide { max-width: 760px; }
 
 /* ---------- landing ---------- */
 .landing {
@@ -369,20 +370,15 @@ input[type="text"]:focus { border-color: var(--track); }
 
 /* 질문 화면에서 항상 보이는 조건 요약 줄 - 작고 눈에 덜 띄게, 클릭 없이 바로 확인 */
 .condition-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 12px;
-}
-.condition-strip .cond-chip {
   background: var(--track-dim);
   color: var(--track);
-  font-size: 0.78rem;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 999px;
-  white-space: nowrap;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
 }
+.condition-strip strong { color: var(--track); }
 
 /* ---------- 질문/응답 (student) - 여기에 시선이 집중되도록 크게 ---------- */
 .question-panel { padding: 26px 24px; }
@@ -419,6 +415,33 @@ input[type="text"]:focus { border-color: var(--track); }
   color: var(--ink);
 }
 .condition-narrative strong { color: var(--track); }
+
+/* ---------- 학생 화면: "내 위치" 개인 트랙 ---------- */
+.my-track-wrap .track {
+  height: 220px;
+}
+.student-dot.other {
+  width: 18px;
+  height: 18px;
+  background: var(--line);
+  border-color: var(--paper);
+  box-shadow: none;
+  opacity: 0.85;
+}
+.student-dot.me {
+  width: 34px;
+  height: 34px;
+  background: var(--accent);
+  border-color: #fff;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  z-index: 2;
+}
 
 .waiting-note {
   text-align: center;

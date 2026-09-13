@@ -3,16 +3,15 @@
    (WebRTC / PeerJS 버전 — 외부 계정·서버 없이 동작)
    ============================================================ */
 
-// 엑셀을 업로드하지 않았을 때 사용할 기본 예시 데이터
-// (선택지는 표가 아니라 문장으로 이어붙여지므로, 되도록 "~하는", "~할 수 있는"처럼
-//  형용사형으로 끝나거나 "비장애인"처럼 명사형으로 자연스럽게 문장이 되도록 작성합니다)
-const DEFAULT_CONDITIONS = [
-  { category: "주거 형태", options: ["서울 대단지 아파트에 거주하는", "지방 소도시 다세대주택에 거주하는", "농어촌 마을에 거주하는", "해외에서 거주하다 최근 귀국한"] },
-  { category: "경제적 상황", options: ["방학마다 해외여행을 갈 수 있는", "필요한 물건은 대부분 살 수 있는", "형편이 어려워 아르바이트를 해야 하는"] },
-  { category: "학원/방과후", options: ["원하는 학원을 마음껏 다닐 수 있는", "형편에 맞춰 학원을 골라야 하는", "학원을 거의 다니지 못하는"] },
-  { category: "장애 여부", options: ["비장애인", "신체적 장애가 있는", "발달 장애가 있는"] },
-  { category: "가족 형태", options: ["부모님과 함께 사는", "한부모 가정에서 자란", "조부모님과 함께 사는"] },
-  { category: "이주배경", options: ["이주배경이 없는", "다문화가정에서 자란", "새터민 가정 출신인"] }
+// 엑셀을 준비하지 않았을 때 사용할 기본 예시 페르소나
+// (내러티브 안에서 **이렇게** 감싸면 그 부분만 볼드로 표시됩니다)
+const DEFAULT_PERSONAS = [
+  { age: 14, narrative: "**서울 대단지 아파트**에 거주하며, 방학마다 **해외여행**을 갈 수 있고, 원하는 학원을 **마음껏** 다닐 수 있는 **비장애인** 학생." },
+  { age: 15, narrative: "**지방 소도시 다세대주택**에 거주하며, 형편에 맞춰 학원을 골라야 하고, **한부모 가정**에서 자란 **비장애인** 학생." },
+  { age: 13, narrative: "**농어촌 마을**에 거주하며, 필요한 물건은 대부분 살 수 있고, **다문화가정**에서 자란 **비장애인** 학생." },
+  { age: 14, narrative: "형편이 어려워 **아르바이트**를 해야 하고, 학원을 거의 다니지 못하며, **조부모님과 함께 사는** 학생." },
+  { age: 15, narrative: "**신체적 장애**가 있고, 부모님과 함께 살며, 방학마다 해외여행을 갈 수 있는 학생." },
+  { age: 13, narrative: "**새터민 가정** 출신이며, 형편에 맞춰 학원을 골라야 하고, 발달 장애가 있는 형제와 함께 자란 학생." }
 ];
 
 const DEFAULT_QUESTIONS = [
@@ -33,26 +32,78 @@ function generateRoomCode() {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
 
-// Firebase 시절 흔적이 아니라 일반적인 안전한 key 문자열 변환용
 function sanitizeKey(raw) {
   return String(raw).trim().replace(/[^a-zA-Z0-9가-힣_-]/g, "_");
 }
 
-// ---------- 조건 배정 ----------
-// 성별은 학생이 입장할 때 직접 입력한 값을 그대로 사용하고(무작위 아님),
-// 나이는 조건에서 아예 제외합니다. 나머지 항목만 엑셀 설정에서 무작위로 배정합니다.
-// 혹시 엑셀에 "성별"이나 "나이" 항목이 남아있어도 무시합니다(자기 입력 값과 충돌 방지).
-function assignConditionsForStudent(conditionsConfig, gender) {
-  const result = {};
-  if (gender) result["성별"] = gender;
-  (conditionsConfig || []).forEach(cond => {
-    if (cond.category === "성별" || cond.category === "나이") return;
-    const options = cond.options || [];
-    if (options.length === 0) return;
-    const pick = options[Math.floor(Math.random() * options.length)];
-    result[cond.category] = pick;
-  });
-  return result;
+// ---------- 배열 셔플 (페르소나 무작위 배정용) ----------
+function shuffledCopy(arr) {
+  const a = (arr || []).slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ---------- 내러티브 렌더링 ----------
+// 엑셀에 **이렇게** 적은 부분을 <strong>으로 변환합니다.
+function parseBoldMarkup(text) {
+  return escapeHtml(text || "").replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+}
+
+// "나는 중학교에 재학 중인 15살 여학생이다. (내러티브 본문)" 형태의 완성 문장을 만듭니다.
+function buildFullNarrativeHtml(gender, age, narrativeRaw) {
+  const genderText = gender ? escapeHtml(gender) : "학생";
+  const ageText = age !== undefined && age !== null && age !== "" ? `<strong>${escapeHtml(String(age))}살</strong> ` : "";
+  const opening = `나는 중학교에 재학 중인 ${ageText}<strong>${genderText}</strong>이다.`;
+  const body = parseBoldMarkup(narrativeRaw || "");
+  return body ? `${opening} ${body}` : opening;
+}
+
+// ---------- 트랙(출발선) 시각화 - 교사/학생 화면 공용 스케일 로직 ----------
+// 학생들이 실제로 위치한 범위(항상 0=출발선 포함)를 트랙 전체 높이에 꽉 채웁니다.
+// 격차가 좁을 때는 화면을 거의 다 써서 과장되고, 격차가 이론상 최대치에 가까워질수록
+// 점점 실제 비율에 가깝게 자연스러워집니다.
+function computeTrackRange(positions, minWindow) {
+  minWindow = minWindow === undefined ? 1.2 : minWindow;
+  let min = Math.min(0, ...positions);
+  let max = Math.max(0, ...positions);
+  if (max - min < minWindow) {
+    const mid = (max + min) / 2;
+    min = mid - minWindow / 2;
+    max = mid + minWindow / 2;
+  }
+  return { min, max };
+}
+function yPctForPos(pos, range, topPct, bottomPct) {
+  topPct = topPct === undefined ? 10 : topPct;
+  bottomPct = bottomPct === undefined ? 90 : bottomPct;
+  const span = range.max - range.min;
+  const normalized = span > 0 ? (pos - range.min) / span : 0.5;
+  return bottomPct - normalized * (bottomPct - topPct);
+}
+
+// 학생 아이콘들의 가로 위치를 "가운데부터 바깥쪽으로" 채워나가는 순서로 배정합니다.
+// (활동 시작 직후 전원이 출발선에 있을 때 화면 가운데부터 자연스럽게 채워지도록)
+function centerOutOffsets(n) {
+  const offsets = [];
+  if (n <= 0) return offsets;
+  offsets.push(0);
+  let k = 1;
+  while (offsets.length < n) {
+    offsets.push(-k);
+    if (offsets.length < n) offsets.push(k);
+    k++;
+  }
+  return offsets;
+}
+function xPctForIndex(i, n) {
+  if (n <= 1) return 50;
+  const offsets = centerOutOffsets(n);
+  const offset = offsets[i];
+  const maxAbs = Math.max(1, ...offsets.map(o => Math.abs(o)));
+  return 50 + (offset / maxAbs) * 42;
 }
 
 // ---------- 로컬스토리지 : 교사(호스트) 쪽 방 상태 ----------
@@ -98,23 +149,21 @@ function clearStudentSession() {
 }
 
 // ---------- 엑셀(xlsx) 파싱 ----------
-// conditions 시트: 항목 | 선택지 (쉼표로 구분)
-// questions 시트 : 순서 | 질문내용 | 선택지1 | 선택지1칸수 | 선택지2 | 선택지2칸수
-//   (칸수는 이동할 칸 수를 그대로 의미 — 음수면 뒤로, 양수면 앞으로, 0이면 이동 없음.
-//    두 선택지 중 어느 쪽이 앞/뒤인지 열 위치로 드러나지 않도록 대칭적인 이름을 사용합니다)
+// personas 시트 : 나이 | 내러티브   (한 행 = 완성된 캐릭터 한 명, 중복 없이 학생 수만큼 배정됨)
+// questions 시트: 순서 | 질문내용 | 선택지1 | 선택지1칸수 | 선택지2 | 선택지2칸수
 function parseConfigWorkbook(workbook) {
-  const condSheetName = workbook.SheetNames.find(n => n.trim() === "conditions" || n.trim() === "조건") || workbook.SheetNames[0];
+  const personaSheetName = workbook.SheetNames.find(n => n.trim() === "personas" || n.trim() === "페르소나") || workbook.SheetNames[0];
   const qSheetName = workbook.SheetNames.find(n => n.trim() === "questions" || n.trim() === "질문") || workbook.SheetNames[1];
 
-  const conditions = [];
-  if (condSheetName) {
-    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[condSheetName], { defval: "" });
+  const personas = [];
+  if (personaSheetName) {
+    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[personaSheetName], { defval: "" });
     rows.forEach(row => {
-      const category = row["항목"] || row["category"] || row["Category"];
-      const optsRaw = row["선택지"] || row["options"] || row["Options"];
-      if (!category || !optsRaw) return;
-      const options = String(optsRaw).split(/[,，]/).map(s => s.trim()).filter(Boolean);
-      if (options.length) conditions.push({ category: String(category).trim(), options });
+      const narrative = row["내러티브"] || row["narrative"];
+      if (!narrative) return;
+      const ageRaw = row["나이"] !== undefined ? row["나이"] : row["age"];
+      const age = ageRaw !== "" && ageRaw !== undefined ? Number(ageRaw) : null;
+      personas.push({ age, narrative: String(narrative).trim() });
     });
   }
 
@@ -135,7 +184,7 @@ function parseConfigWorkbook(workbook) {
       .forEach(q => questions.push(q));
   }
 
-  return { conditions, questions };
+  return { personas, questions };
 }
 
 function clampPosition(pos, min = -10, max = 10) {
