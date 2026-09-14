@@ -50,6 +50,14 @@ function shuffledCopy(arr) {
 // "나는 중학교에 재학 중인 {나이}살 {성별}학생이다." 형태의 문장 템플릿 (엑셀 settings 시트에서 교체 가능)
 const DEFAULT_OPENING_TEMPLATE = "나는 중학교에 재학 중인 {나이}살 {성별}학생이다.";
 
+// 기본 활동 안내문구 (엑셀 settings 시트의 "안내문구" 항목으로 교체 가능)
+const DEFAULT_INTRO_INSTRUCTIONS =
+  "1. 여러분에게는 무작위로 정해진 가상의 캐릭터(또는 실제 자신의 상황)가 주어집니다.\n" +
+  "2. 선생님이 질문을 하나씩 제시하면, 자신의 조건에 비추어 두 선택지 중 하나를 골라 확정해주세요.\n" +
+  "3. 선택에 따라 화면 속 나의 위치가 앞뒤로 움직입니다.\n" +
+  "4. 옆 친구와 위치를 비교하며 놀리거나 장난치지 않도록 유의해주세요.\n" +
+  "5. 활동이 끝나면 나의 최종 위치와 반 전체에서의 순위를 확인할 수 있습니다.";
+
 // 엑셀에 **이렇게** 적은 부분을 <strong>으로 변환합니다.
 function parseBoldMarkup(text) {
   return escapeHtml(text || "").replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
@@ -193,6 +201,7 @@ function parseConfigWorkbook(workbook) {
   }
 
   let openingTemplate = null;
+  let introInstructions = null;
   if (settingsSheetName) {
     const rows = XLSX.utils.sheet_to_json(workbook.Sheets[settingsSheetName], { defval: "" });
     rows.forEach(row => {
@@ -201,10 +210,13 @@ function parseConfigWorkbook(workbook) {
       if ((key === "오프닝문장" || key === "opening_template") && val) {
         openingTemplate = String(val).trim();
       }
+      if ((key === "안내문구" || key === "instructions") && val) {
+        introInstructions = String(val).trim();
+      }
     });
   }
 
-  return { personas, questions, openingTemplate };
+  return { personas, questions, openingTemplate, introInstructions };
 }
 
 function clampPosition(pos, min = -10, max = 10) {

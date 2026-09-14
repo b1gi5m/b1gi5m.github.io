@@ -27,7 +27,7 @@ function colorForKey(key) {
 }
 
 function showView(name) {
-  ['create', 'waiting', 'active', 'ended'].forEach(v => {
+  ['create', 'waiting', 'intro', 'active', 'ended'].forEach(v => {
     document.getElementById('view-' + v).style.display = (v === name) ? '' : 'none';
   });
   document.getElementById('topbar-room').style.display = (name === 'create') ? 'none' : '';
@@ -60,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
   on('btn-create-room', 'click', () => createRoom());
   on('btn-rejoin-room', 'click', rejoinRoom);
   on('btn-start-activity', 'click', startActivity);
+  on('btn-begin-questions', 'click', beginQuestions);
   on('btn-next-question', 'click', nextQuestion);
   on('btn-end-activity', 'click', endActivity);
   on('btn-delete-room', 'click', deleteRoom);
@@ -85,11 +86,12 @@ async function loadConfigFromFile() {
     return {
       personas: parsed.personas.length ? parsed.personas : DEFAULT_PERSONAS,
       questions: parsed.questions.length ? parsed.questions : DEFAULT_QUESTIONS,
-      openingTemplate: parsed.openingTemplate || DEFAULT_OPENING_TEMPLATE
+      openingTemplate: parsed.openingTemplate || DEFAULT_OPENING_TEMPLATE,
+      introInstructions: parsed.introInstructions || DEFAULT_INTRO_INSTRUCTIONS
     };
   } catch (e) {
     console.warn('config.xlsx 를 불러오지 못해 기본 예시 데이터를 사용합니다.', e);
-    return { personas: DEFAULT_PERSONAS, questions: DEFAULT_QUESTIONS, openingTemplate: DEFAULT_OPENING_TEMPLATE };
+    return { personas: DEFAULT_PERSONAS, questions: DEFAULT_QUESTIONS, openingTemplate: DEFAULT_OPENING_TEMPLATE, introInstructions: DEFAULT_INTRO_INSTRUCTIONS };
   }
 }
 
@@ -225,6 +227,15 @@ function handleStudentMessage(conn, msg) {
     return;
   }
 
+  if (msg.type === 'introConfirmed') {
+    const key = conn.studentKey;
+    if (!key || !room.students[key]) return;
+    room.students[key].introConfirmed = true;
+    persist();
+    renderRoom();
+    return;
+  }
+
   if (msg.type === 'respond') {
     const key = conn.studentKey;
     if (!key || !room.students[key]) return;
@@ -317,6 +328,9 @@ function renderRoom() {
   if (room.status === 'waiting') {
     showView('waiting');
     renderWaiting();
+  } else if (room.status === 'intro') {
+    showView('intro');
+    renderIntroWaiting();
   } else if (room.status === 'active') {
     showView('active');
     renderActive();
@@ -324,6 +338,21 @@ function renderRoom() {
     showView('ended');
     renderEnded();
   }
+}
+
+function renderIntroWaiting() {
+  const cfg = room.config || {};
+  document.getElementById('intro-instructions').textContent = cfg.introInstructions || DEFAULT_INTRO_INSTRUCTIONS;
+
+  const students = room.students || {};
+  const keys = Object.keys(students);
+  const confirmed = keys.filter(k => students[k].introConfirmed);
+  const notConfirmed = keys.filter(k => !students[k].introConfirmed);
+
+  document.getElementById('intro-confirmed-count').textContent = `${confirmed.length} / ${keys.length}`;
+  document.getElementById('intro-notconfirmed-list').innerHTML = notConfirmed
+    .map(k => `<span class="chip pending">${escapeHtml(students[k].number || k)}</span>`).join('') ||
+    '<span class="empty-note">없음</span>';
 }
 
 function renderWaiting() {
@@ -372,11 +401,20 @@ function startActivity() {
   keys.forEach(key => {
     students[key].position = 0;
     students[key].responses = {};
+    students[key].introConfirmed = false;
   });
 
+  room.status = 'intro';
+  room.currentQuestionIndex = -1;
+  room.activityStartedAt = Date.now();
+  persist();
+  renderRoom();
+  broadcastAll();
+}
+
+function beginQuestions() {
   room.status = 'active';
   room.currentQuestionIndex = 0;
-  room.activityStartedAt = Date.now();
   persist();
   renderRoom();
   broadcastAll();
@@ -491,6 +529,31 @@ function endActivity() {
 function renderEnded() {
   const students = room.students || {};
   renderTrack('track-ended', students, -1, false);
+  renderEndedStats(students);
+}
+
+function renderEndedStats(students) {
+  const el = document.getElementById('ended-stats');
+  if (!el) return;
+  const keys = Object.keys(students);
+  if (keys.length === 0) {
+    el.innerHTML = '<div class="empty-note">학생 데이터가 없습니다</div>';
+    return;
+  }
+  const positions = keys.map(k => students[k].position || 0);
+  const max = Math.max(...positions);
+  const min = Math.min(...positions);
+  const gap = max - min;
+  const avg = positions.reduce((a, b) => a + b, 0) / positions.length;
+  const ahead = positions.filter(p => p > 0).length;
+  const behind = positions.filter(p => p < 0).length;
+  const atStart = positions.filter(p => p === 0).length;
+
+  el.innerHTML = `
+    <div class="stat-item"><div class="stat-value">${gap}칸</div><div class="stat-label">가장 앞선 사람과 가장 뒤처진 사람의 차이</div></div>
+    <div class="stat-item"><div class="stat-value">${avg.toFixed(1)}칸</div><div class="stat-label">전체 평균 위치 (0 = 출발선)</div></div>
+    <div class="stat-item"><div class="stat-value">${ahead} / ${atStart} / ${behind}</div><div class="stat-label">앞섬 / 제자리 / 뒤처짐 인원</div></div>
+  `;
 }
 
 function deleteRoom() {

@@ -61,6 +61,25 @@
     </div>
   </div>
 
+  <div class="main narrow" id="view-intro" style="display:none;">
+    <div class="panel">
+      <h2 class="section-title">활동 안내</h2>
+      <p class="helper" id="intro-instructions" style="white-space:pre-line; margin-top:10px; line-height:1.7;"></p>
+    </div>
+
+    <div class="panel" style="margin-top:18px;">
+      <div class="row-between">
+        <h3 style="font-size:0.95rem;">조건 확인 완료 (<span id="intro-confirmed-count">0 / 0</span>)</h3>
+      </div>
+      <div class="helper" style="margin-top:6px; margin-bottom:6px;">아직 확인하지 않은 학생</div>
+      <div class="chip-list" id="intro-notconfirmed-list"></div>
+    </div>
+
+    <button class="btn btn-secondary btn-block btn-lg" id="btn-begin-questions" style="margin-top:18px;">
+      질문 시작하기 →
+    </button>
+  </div>
+
   <div class="main" id="view-active" style="display:none;">
     <div class="track-wrap">
       <div class="track" id="track">
@@ -104,6 +123,9 @@
       <div class="track" id="track-ended">
         <div class="baseline"></div>
       </div>
+    </div>
+    <div class="panel" style="margin-top:18px;">
+      <div class="stats-grid" id="ended-stats"></div>
     </div>
     <div class="panel" style="margin-top:18px; text-align:center;">
       <button class="btn btn-ghost" id="btn-delete-room">이 방 삭제하기</button>

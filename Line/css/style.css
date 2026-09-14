@@ -126,7 +126,7 @@ input[type="text"]:focus { border-color: var(--track); }
 }
 
 .narrow { max-width: 480px; }
-.wide { max-width: 760px; }
+.wide { max-width: 960px; }
 
 /* ---------- landing ---------- */
 .landing {
@@ -443,6 +443,80 @@ input[type="text"]:focus { border-color: var(--track); }
   z-index: 2;
 }
 
+/* ---------- 학생 화면: 질문 레이아웃 ----------
+   기본(좁은 화면)은 위아래로 쌓이고, 태블릿 가로 폭 이상에서는
+   "내 위치" 트랙과 질문/선택지가 좌우로 나란히 배치되어 한 화면에 들어옵니다. */
+.question-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.question-col { flex: 1; min-width: 0; }
+
+@media (min-width: 860px) {
+  .question-layout {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  .question-layout .my-track-wrap {
+    flex: 0 0 300px;
+    margin-top: 0;
+  }
+  .question-layout .question-col {
+    flex: 1;
+  }
+  .my-track-wrap .track {
+    height: 320px;
+  }
+}
+
+/* ---------- 새 질문 도착 / 제출 완료 피드백 ---------- */
+.flash-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999;
+  border: 0 solid transparent;
+  opacity: 0;
+}
+.flash-overlay.flash-question {
+  border-width: 12px;
+  border-color: var(--accent);
+  animation: flashFade 1s ease forwards;
+}
+.flash-overlay.flash-submitted {
+  border-width: 12px;
+  border-color: var(--success);
+  animation: flashFade 1s ease forwards;
+}
+@keyframes flashFade {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 30px;
+  transform: translateX(-50%) translateY(16px);
+  background: var(--ink);
+  color: #fff;
+  padding: 11px 22px;
+  border-radius: 999px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 1000;
+  white-space: nowrap;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.toast.success { background: var(--success); }
+
 .waiting-note {
   text-align: center;
   padding: 40px 10px;
@@ -482,4 +556,30 @@ input[type="text"]:focus { border-color: var(--track); }
   padding: 10px 0;
   border-bottom: 1px solid var(--line);
   font-size: 0.95rem;
+}
+
+/* ---------- 종료 화면 통계 (교사) ---------- */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+@media (max-width: 640px) {
+  .stats-grid { grid-template-columns: 1fr; }
+}
+.stat-item {
+  text-align: center;
+  padding: 14px 10px;
+  background: var(--track-dim);
+  border-radius: var(--radius-sm);
+}
+.stat-value {
+  font-family: var(--font-head);
+  font-size: 1.5rem;
+  color: var(--track);
+}
+.stat-label {
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  margin-top: 4px;
 }

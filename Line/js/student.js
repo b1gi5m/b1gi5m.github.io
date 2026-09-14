@@ -17,7 +17,9 @@ let shuttingDown = false;       // 방 삭제 등으로 "의도적으로" 연결
 
 let introSeenForTs = null;       // 이번 활동(activityStartedAt)에 대해 조건 확인 화면을 이미 봤는지
 let lastRenderedQuestionIndex = null;
+let confirmedQuestionIndex = null; // "제출 완료" 피드백을 이미 보여준 질문 인덱스 (중복 방지)
 let pendingChoice = null;        // 아직 "확정"을 누르지 않은 임시 선택
+let toastTimer = null;
 
 // 요소가 없어도 나머지 리스너 등록이 멈추지 않도록 안전하게 바인딩
 function on(id, event, handler) {
@@ -27,6 +29,24 @@ function on(id, event, handler) {
     return;
   }
   el.addEventListener(event, handler);
+}
+
+// ---------- 새 질문 도착 / 제출 완료 피드백 ----------
+function triggerFlash(type) {
+  const el = document.getElementById('flash-overlay');
+  if (!el) return;
+  el.classList.remove('flash-question', 'flash-submitted');
+  void el.offsetWidth; // 강제 리플로우 - 같은 애니메이션을 다시 재생하기 위함
+  el.classList.add(type);
+}
+function showToast(msg, kind) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.toggle('success', kind === 'success');
+  el.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 1800);
 }
 
 function showView(name) {
@@ -57,7 +77,11 @@ document.addEventListener('DOMContentLoaded', () => {
   on('btn-leave-waiting', 'click', leaveToJoinScreen);
 
   on('btn-intro-continue', 'click', () => {
-    if (lastState) introSeenForTs = lastState.activityStartedAt;
+    if (!lastState) return;
+    introSeenForTs = lastState.activityStartedAt;
+    if (myConn && myConn.open) {
+      myConn.send({ type: 'introConfirmed' });
+    }
     renderFromState();
   });
 
@@ -134,6 +158,7 @@ function startJoin(roomCode, number, existingKey, gender) {
   reconnectAttempts = 0;
   introSeenForTs = null;
   lastRenderedQuestionIndex = null;
+  confirmedQuestionIndex = null;
   pendingChoice = null;
   stopHeartbeat();
 
@@ -341,10 +366,12 @@ function renderFromState() {
   if (state.status === 'waiting') {
     showView('waiting');
     document.getElementById('waiting-number').textContent = myNumber;
-  } else if (state.status === 'active') {
+  } else if (state.status === 'intro' || state.status === 'active') {
     showView('active');
     if (introSeenForTs !== state.activityStartedAt) {
       showIntro(state);
+    } else if (state.status === 'intro') {
+      showWaitingForTeacher();
     } else {
       showQuestion(state);
     }
@@ -356,6 +383,7 @@ function renderFromState() {
 
 function showIntro(state) {
   document.getElementById('sub-intro').style.display = '';
+  document.getElementById('sub-waiting-teacher').style.display = 'none';
   document.getElementById('sub-question').style.display = 'none';
   renderNarrativeInto(
     'condition-list-intro', 'intro-heading', state,
@@ -364,8 +392,15 @@ function showIntro(state) {
   );
 }
 
+function showWaitingForTeacher() {
+  document.getElementById('sub-intro').style.display = 'none';
+  document.getElementById('sub-waiting-teacher').style.display = '';
+  document.getElementById('sub-question').style.display = 'none';
+}
+
 function showQuestion(state) {
   document.getElementById('sub-intro').style.display = 'none';
+  document.getElementById('sub-waiting-teacher').style.display = 'none';
   document.getElementById('sub-question').style.display = '';
 
   const stripEl = document.getElementById('condition-strip');
@@ -391,6 +426,8 @@ function showQuestion(state) {
   if (state.questionIndex !== lastRenderedQuestionIndex) {
     lastRenderedQuestionIndex = state.questionIndex;
     pendingChoice = null;
+    triggerFlash('flash-question');
+    showToast('새 질문이 도착했어요!');
   }
 
   document.getElementById('q-index-label').textContent = `질문 ${state.questionIndex + 1} / ${state.totalQuestions}`;
@@ -415,6 +452,11 @@ function showQuestion(state) {
     btn1.classList.toggle('selected', alreadyAnswered.choice === 'choice1');
     btn2.classList.toggle('selected', alreadyAnswered.choice === 'choice2');
     note.style.display = '';
+    if (confirmedQuestionIndex !== state.questionIndex) {
+      confirmedQuestionIndex = state.questionIndex;
+      triggerFlash('flash-submitted');
+      showToast('제출 완료!', 'success');
+    }
   } else {
     btn1.disabled = false;
     btn2.disabled = false;
