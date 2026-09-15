@@ -125,11 +125,9 @@
   <div class="main wide" id="view-ended" style="display:none;">
     <div class="panel">
       <h2 class="section-title">활동이 끝났어요</h2>
-      <p class="helper">나의 최종 위치: <strong id="final-position" style="color:var(--track); font-size:1.2rem;"></strong></p>
-      <p class="helper" id="final-percentile" style="margin-top:4px; display:none;"></p>
     </div>
 
-    <div class="track-wrap my-track-wrap">
+    <div class="track-wrap my-track-wrap" style="margin-top:18px;">
       <div class="helper" style="margin-bottom:8px;">우리 반에서 나의 최종 위치</div>
       <div class="track" id="my-track-ended">
         <div class="baseline"></div>
@@ -139,6 +137,12 @@
     <div class="panel" id="final-condition-card" style="margin-top:18px;">
       <h3>내가 배정받았던 조건</h3>
       <p id="final-condition-list" class="condition-narrative"></p>
+    </div>
+
+    <div class="panel" style="margin-top:18px; text-align:center;">
+      <div class="helper">나의 최종 위치</div>
+      <div style="font-family:var(--font-head); font-size:2rem; color:var(--track); margin-top:6px;" id="final-position"></div>
+      <p class="helper" id="final-percentile" style="margin-top:6px; display:none;"></p>
     </div>
   </div>
 </div>

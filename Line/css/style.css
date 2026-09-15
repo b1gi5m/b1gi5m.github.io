@@ -262,7 +262,7 @@ input[type="text"]:focus { border-color: var(--track); }
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 20px 24px;
+  padding: 24px 24px;
 }
 .track {
   position: relative;
@@ -368,15 +368,17 @@ input[type="text"]:focus { border-color: var(--track); }
 .condition-card.intro h3 { font-size: 1.15rem; margin-bottom: 16px; }
 .condition-card.intro .condition-item { font-size: 1.05rem; padding: 10px 0; }
 
-/* 질문 화면에서 항상 보이는 조건 요약 줄 - 작고 눈에 덜 띄게, 클릭 없이 바로 확인 */
+/* 질문 화면에서 항상 보이는 조건 요약 줄 - 눈에 띄지 않게 방해하지 않으면서도 잘 읽히게 */
 .condition-strip {
-  background: var(--track-dim);
-  color: var(--track);
-  font-size: 0.85rem;
-  line-height: 1.6;
-  padding: 10px 14px;
-  border-radius: var(--radius-sm);
-  margin-bottom: 12px;
+  background: var(--paper);
+  border-left: 4px solid var(--track);
+  color: var(--ink);
+  font-size: 0.92rem;
+  line-height: 1.65;
+  padding: 14px 18px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
 }
 .condition-strip strong { color: var(--track); }
 
@@ -417,8 +419,11 @@ input[type="text"]:focus { border-color: var(--track); }
 .condition-narrative strong { color: var(--track); }
 
 /* ---------- 학생 화면: "내 위치" 개인 트랙 ---------- */
+.my-track-wrap {
+  margin-top: 0;
+}
 .my-track-wrap .track {
-  height: 220px;
+  height: 340px;
 }
 .student-dot.other {
   width: 18px;
@@ -445,28 +450,38 @@ input[type="text"]:focus { border-color: var(--track); }
 
 /* ---------- 학생 화면: 질문 레이아웃 ----------
    기본(좁은 화면)은 위아래로 쌓이고, 태블릿 가로 폭 이상에서는
-   "내 위치" 트랙과 질문/선택지가 좌우로 나란히 배치되어 한 화면에 들어옵니다. */
+   "내 위치" 트랙과 질문/선택지가 좌우로 나란히 배치되어 한 화면에 들어옵니다.
+   이때 두 칸의 높이가 서로 어긋나 보이지 않도록 같은 높이로 늘려서 맞춥니다. */
 .question-layout {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
-.question-col { flex: 1; min-width: 0; }
+.question-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 
 @media (min-width: 860px) {
   .question-layout {
     flex-direction: row;
-    align-items: flex-start;
+    align-items: stretch;
   }
   .question-layout .my-track-wrap {
-    flex: 0 0 300px;
-    margin-top: 0;
+    flex: 0 0 340px;
+    display: flex;
+    flex-direction: column;
+  }
+  .question-layout .my-track-wrap .track {
+    flex: 1;
+    height: auto;
+    min-height: 440px;
   }
   .question-layout .question-col {
     flex: 1;
   }
-  .my-track-wrap .track {
-    height: 320px;
+  .question-layout .question-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
 }
 
