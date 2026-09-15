@@ -49,6 +49,14 @@ function showToast(msg, kind) {
   toastTimer = setTimeout(() => el.classList.remove('show'), 1800);
 }
 
+// 이동 결과(칸수)를 사람이 읽기 좋은 문구로 바꿉니다.
+function describeMoveResult(delta) {
+  const d = delta || 0;
+  if (d > 0) return d === 1 ? '앞으로 한 걸음' : `앞으로 ${d}걸음`;
+  if (d < 0) return Math.abs(d) === 1 ? '뒤로 한 걸음' : `뒤로 ${Math.abs(d)}걸음`;
+  return '제자리';
+}
+
 function showView(name) {
   ['join', 'waiting', 'active', 'ended'].forEach(v => {
     document.getElementById('view-' + v).style.display = (v === name) ? '' : 'none';
@@ -427,7 +435,7 @@ function showQuestion(state) {
     lastRenderedQuestionIndex = state.questionIndex;
     pendingChoice = null;
     triggerFlash('flash-question');
-    showToast('새 질문이 도착했어요!');
+    showToast('다음 질문 확인');
   }
 
   document.getElementById('q-index-label').textContent = `질문 ${state.questionIndex + 1} / ${state.totalQuestions}`;
@@ -455,7 +463,7 @@ function showQuestion(state) {
     if (confirmedQuestionIndex !== state.questionIndex) {
       confirmedQuestionIndex = state.questionIndex;
       triggerFlash('flash-submitted');
-      showToast('제출 완료!', 'success');
+      showToast(describeMoveResult(alreadyAnswered.delta), 'success');
     }
   } else {
     btn1.disabled = false;
