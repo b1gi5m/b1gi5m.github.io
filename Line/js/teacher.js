@@ -86,12 +86,11 @@ async function loadConfigFromFile() {
     return {
       personas: parsed.personas.length ? parsed.personas : DEFAULT_PERSONAS,
       questions: parsed.questions.length ? parsed.questions : DEFAULT_QUESTIONS,
-      openingTemplate: parsed.openingTemplate || DEFAULT_OPENING_TEMPLATE,
       introInstructions: parsed.introInstructions || DEFAULT_INTRO_INSTRUCTIONS
     };
   } catch (e) {
     console.warn('config.xlsx 를 불러오지 못해 기본 예시 데이터를 사용합니다.', e);
-    return { personas: DEFAULT_PERSONAS, questions: DEFAULT_QUESTIONS, openingTemplate: DEFAULT_OPENING_TEMPLATE, introInstructions: DEFAULT_INTRO_INSTRUCTIONS };
+    return { personas: DEFAULT_PERSONAS, questions: DEFAULT_QUESTIONS, introInstructions: DEFAULT_INTRO_INSTRUCTIONS };
   }
 }
 
@@ -290,7 +289,6 @@ function buildStatePayload(key) {
     totalQuestions: questions.length,
     question: questions[idx] || null,
     activityStartedAt: room.activityStartedAt || null,
-    openingTemplate: (room.config && room.config.openingTemplate) || DEFAULT_OPENING_TEMPLATE,
     me: {
       number: student.number,
       gender: student.gender || null,
@@ -494,7 +492,7 @@ function renderStatusLists(students, currentQuestionIndex) {
 function showTooltip(e, student) {
   const tip = document.getElementById('tooltip');
   const narrativeHtml = student.persona
-    ? buildFullNarrativeHtml(student.gender, student.persona.age, student.persona.narrative, (room.config && room.config.openingTemplate) || DEFAULT_OPENING_TEMPLATE)
+    ? buildNarrativeHtml(student.gender, student.persona)
     : '조건 미배정';
   tip.innerHTML = `<div class="t-title">학번 ${escapeHtml(student.number || '')}</div>${narrativeHtml}`;
   tip.style.display = 'block';

@@ -256,6 +256,18 @@ input[type="text"]:focus { border-color: var(--track); }
   padding: 18px 20px;
 }
 
+.instructions-box {
+  white-space: pre-line;
+  margin-top: 16px;
+  background: var(--track-dim);
+  border-radius: var(--radius);
+  padding: 22px 26px;
+  font-family: var(--font-head);
+  font-size: 1.35rem;
+  line-height: 2;
+  color: var(--ink);
+}
+
 /* ---------- track visualization (수직: 위=앞으로, 아래=뒤로) ---------- */
 .track-wrap {
   margin-top: 20px;
@@ -370,12 +382,10 @@ input[type="text"]:focus { border-color: var(--track); }
 
 /* 질문 화면에서 항상 보이는 조건 요약 카드 - 다른 카드들과 같은 스타일 언어(헤더+본문) */
 .condition-strip {
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 16px 20px;
-  margin-bottom: 16px;
-  box-shadow: var(--shadow);
+  background: var(--track-dim);
+  border-radius: var(--radius-sm);
+  padding: 14px 18px;
+  margin-bottom: 18px;
 }
 .card-header {
   font-size: 0.8rem;
@@ -394,29 +404,23 @@ input[type="text"]:focus { border-color: var(--track); }
    질문 길이가 달라져도 카드 전체 높이가 흔들리지 않게 합니다. ---------- */
 .question-panel {
   padding: 22px 24px;
-  height: 420px;
-  display: flex;
-  flex-direction: column;
 }
 .question-panel .card-header {
-  flex: 0 0 auto;
+  margin-top: 4px;
 }
 .question-text-area {
-  flex: 1 1 auto;
-  min-height: 0;
+  min-height: 100px;
   display: flex;
   align-items: center;
-  overflow-y: auto;
-  margin: 6px 0;
+  margin: 10px 0;
 }
 .big-question {
   font-family: var(--font-head);
-  font-size: 1.55rem;
+  font-size: 1.6rem;
   line-height: 1.5;
   color: var(--ink);
 }
 .answer-area {
-  flex: 0 0 auto;
   border-top: 2px solid var(--line);
   padding-top: 16px;
   margin-top: 8px;
@@ -432,13 +436,13 @@ input[type="text"]:focus { border-color: var(--track); }
 }
 .choice-btn {
   border-radius: var(--radius);
-  padding: 20px 16px;
+  padding: 15px 14px;
   text-align: center;
   border: 2px solid var(--line);
   background: var(--paper);
 }
 .choice-btn:hover:not(:disabled) { border-color: var(--track); background: var(--track-dim); }
-.choice-btn .c-label { font-weight: 700; font-size: 1.2rem; }
+.choice-btn .c-label { font-weight: 700; font-size: 1.02rem; }
 .choice-btn.selected { border-color: var(--track); background: var(--track-dim); }
 
 .condition-narrative {
@@ -513,7 +517,7 @@ input[type="text"]:focus { border-color: var(--track); }
 }
 .flash-overlay.flash-submitted {
   border-width: 12px;
-  border-color: var(--success);
+  border-color: var(--ink-soft);
   animation: flashFade 1s ease forwards;
 }
 @keyframes flashFade {

@@ -3,15 +3,16 @@
    (WebRTC / PeerJS 버전 — 외부 계정·서버 없이 동작)
    ============================================================ */
 
-// 엑셀을 준비하지 않았을 때 사용할 기본 예시 페르소나
-// (내러티브 안에서 **이렇게** 감싸면 그 부분만 볼드로 표시됩니다)
+// 엑셀을 준비하지 않았을 때 사용할 기본 예시 배경 서사
+// (내러티브 안에서 **이렇게** 감싸면 그 부분만 볼드로 표시되고, {성별} 자리에는
+//  학생이 입장 시 선택한 성별("남" 또는 "여")이 그대로 들어갑니다)
 const DEFAULT_PERSONAS = [
-  { age: 14, narrative: "**서울 대단지 아파트**에 거주하며, 방학마다 **해외여행**을 갈 수 있고, 원하는 학원을 **마음껏** 다닐 수 있는 **비장애인** 학생." },
-  { age: 15, narrative: "**지방 소도시 다세대주택**에 거주하며, 형편에 맞춰 학원을 골라야 하고, **한부모 가정**에서 자란 **비장애인** 학생." },
-  { age: 13, narrative: "**농어촌 마을**에 거주하며, 필요한 물건은 대부분 살 수 있고, **다문화가정**에서 자란 **비장애인** 학생." },
-  { age: 14, narrative: "형편이 어려워 **아르바이트**를 해야 하고, 학원을 거의 다니지 못하며, **조부모님과 함께 사는** 학생." },
-  { age: 15, narrative: "**신체적 장애**가 있고, 부모님과 함께 살며, 방학마다 해외여행을 갈 수 있는 학생." },
-  { age: 13, narrative: "**새터민 가정** 출신이며, 형편에 맞춰 학원을 골라야 하고, 발달 장애가 있는 형제와 함께 자란 학생." }
+  "나는 15살 {성별}이며, **서울 대단지 아파트**에 거주하며 방학마다 **해외여행**을 갈 수 있고, 원하는 학원을 **마음껏** 다닐 수 있는 **비장애인** 학생이다.",
+  "나는 14살 {성별}이며, **지방 소도시 다세대주택**에 거주하며 형편에 맞춰 학원을 골라야 하고, **한부모 가정**에서 자란 **비장애인** 학생이다.",
+  "나는 13살 {성별}이며, **농어촌 마을**에 거주하며 필요한 물건은 대부분 살 수 있고, **다문화가정**에서 자란 **비장애인** 학생이다.",
+  "나는 15살 {성별}이며, 형편이 어려워 **아르바이트**를 해야 하고, 학원을 거의 다니지 못하며, **조부모님과 함께 사는** 학생이다.",
+  "나는 14살 {성별}이며, **신체적 장애**가 있고, 부모님과 함께 살며, 방학마다 해외여행을 갈 수 있는 학생이다.",
+  "나는 13살 {성별}이며, **새터민 가정** 출신이고, 형편에 맞춰 학원을 골라야 하며, 발달 장애가 있는 형제와 함께 자란 학생이다."
 ];
 
 const DEFAULT_QUESTIONS = [
@@ -47,12 +48,9 @@ function shuffledCopy(arr) {
 }
 
 // ---------- 내러티브 렌더링 ----------
-// "나는 중학교에 재학 중인 {나이}살 {성별}학생이다." 형태의 문장 템플릿 (엑셀 settings 시트에서 교체 가능)
-const DEFAULT_OPENING_TEMPLATE = "나는 중학교에 재학 중인 {나이}살 {성별}학생이다.";
-
-// 기본 활동 안내문구 (엑셀 settings 시트의 "안내문구" 항목으로 교체 가능)
+// 기본 활동 안내문구 (엑셀 settings 시트의 "활동안내" 항목으로 교체 가능)
 const DEFAULT_INTRO_INSTRUCTIONS =
-  "1. 여러분에게는 무작위로 정해진 가상의 캐릭터(또는 실제 자신의 상황)가 주어집니다.\n" +
+  "1. 여러분에게는 무작위로 정해진 배경 이야기(또는 실제 자신의 상황)가 주어집니다.\n" +
   "2. 선생님이 질문을 하나씩 제시하면, 자신의 조건에 비추어 두 선택지 중 하나를 골라 확정해주세요.\n" +
   "3. 선택에 따라 화면 속 나의 위치가 앞뒤로 움직입니다.\n" +
   "4. 옆 친구와 위치를 비교하며 놀리거나 장난치지 않도록 유의해주세요.\n" +
@@ -63,16 +61,12 @@ function parseBoldMarkup(text) {
   return escapeHtml(text || "").replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
 }
 
-// 오프닝 문장 템플릿({나이}, {성별} 토큰 치환) + 내러티브 본문을 이어붙인 완성 문장을 만듭니다.
-function buildFullNarrativeHtml(gender, age, narrativeRaw, openingTemplate) {
-  const tpl = openingTemplate || DEFAULT_OPENING_TEMPLATE;
+// 내러티브 안의 {성별} 토큰을 학생이 입장 시 선택한 성별("남"/"여")로 바꾸고,
+// **볼드** 마크업을 적용한 완성된 문장을 만듭니다.
+function buildNarrativeHtml(gender, narrativeRaw) {
   const genderText = gender || "학생";
-  const ageText = (age !== undefined && age !== null && age !== "") ? String(age) : "";
-  const opening = escapeHtml(tpl)
-    .replace(/\{나이\}/g, `<strong>${escapeHtml(ageText)}</strong>`)
-    .replace(/\{성별\}/g, `<strong>${escapeHtml(genderText)}</strong>`);
-  const body = parseBoldMarkup(narrativeRaw || "");
-  return body ? `${opening} ${body}` : opening;
+  const withGender = String(narrativeRaw || "").replace(/\{성별\}/g, genderText);
+  return parseBoldMarkup(withGender);
 }
 
 // ---------- 트랙(출발선) 시각화 - 교사/학생 화면 공용 스케일 로직 ----------
@@ -163,9 +157,9 @@ function clearStudentSession() {
 }
 
 // ---------- 엑셀(xlsx) 파싱 ----------
-// personas 시트 : 나이 | 내러티브   (한 행 = 완성된 캐릭터 한 명, 중복 없이 학생 수만큼 배정됨)
+// personas 시트 : 내러티브   (한 행 = 완성된 배경 서사 한 개, 중복 없이 학생 수만큼 배정됨)
 // questions 시트: 순서 | 질문내용 | 선택지1 | 선택지1칸수 | 선택지2 | 선택지2칸수
-// settings 시트 : 항목 | 값        (예: 오프닝문장 | 나는 중학교에 재학 중인 {나이}살 {성별}이다.)
+// settings 시트 : 항목 | 값        (예: 활동안내 | 1. ...\n2. ...)
 function parseConfigWorkbook(workbook) {
   const personaSheetName = workbook.SheetNames.find(n => n.trim() === "personas" || n.trim() === "페르소나") || workbook.SheetNames[0];
   const qSheetName = workbook.SheetNames.find(n => n.trim() === "questions" || n.trim() === "질문") || workbook.SheetNames[1];
@@ -177,9 +171,7 @@ function parseConfigWorkbook(workbook) {
     rows.forEach(row => {
       const narrative = row["내러티브"] || row["narrative"];
       if (!narrative) return;
-      const ageRaw = row["나이"] !== undefined ? row["나이"] : row["age"];
-      const age = ageRaw !== "" && ageRaw !== undefined ? Number(ageRaw) : null;
-      personas.push({ age, narrative: String(narrative).trim() });
+      personas.push(String(narrative).trim());
     });
   }
 
@@ -200,23 +192,19 @@ function parseConfigWorkbook(workbook) {
       .forEach(q => questions.push(q));
   }
 
-  let openingTemplate = null;
   let introInstructions = null;
   if (settingsSheetName) {
     const rows = XLSX.utils.sheet_to_json(workbook.Sheets[settingsSheetName], { defval: "" });
     rows.forEach(row => {
       const key = String(row["항목"] || row["key"] || "").trim();
       const val = row["값"] !== undefined ? row["값"] : row["value"];
-      if ((key === "오프닝문장" || key === "opening_template") && val) {
-        openingTemplate = String(val).trim();
-      }
-      if ((key === "안내문구" || key === "instructions") && val) {
+      if ((key === "활동안내" || key === "안내문구" || key === "instructions") && val) {
         introInstructions = String(val).trim();
       }
     });
   }
 
-  return { personas, questions, openingTemplate, introInstructions };
+  return { personas, questions, introInstructions };
 }
 
 function clampPosition(pos, min = -10, max = 10) {

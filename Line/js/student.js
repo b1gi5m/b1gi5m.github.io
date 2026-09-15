@@ -353,7 +353,7 @@ function describePosition(pos) {
   return pos > 0 ? `출발선보다 ${pos}칸 앞` : `출발선보다 ${Math.abs(pos)}칸 뒤`;
 }
 
-// 페르소나 모드면 완성된 캐릭터 문장을, 실제 조건 모드면 안내 문구를 보여줍니다.
+// 페르소나 모드면 완성된 배경 서사를, 실제 조건 모드면 안내 문구를 보여줍니다.
 function renderNarrativeInto(targetElId, headingElId, state, headingPersona, headingSelf, bodySelf) {
   const el = document.getElementById(targetElId);
   const headingEl = headingElId ? document.getElementById(headingElId) : null;
@@ -364,7 +364,7 @@ function renderNarrativeInto(targetElId, headingElId, state, headingPersona, hea
     return;
   }
   if (headingEl) headingEl.textContent = headingPersona;
-  el.innerHTML = buildFullNarrativeHtml(state.me.gender, state.me.persona.age, state.me.persona.narrative, state.openingTemplate);
+  el.innerHTML = buildNarrativeHtml(state.me.gender, state.me.persona);
 }
 
 function renderFromState() {
@@ -417,7 +417,7 @@ function showQuestion(state) {
   } else {
     stripCard.style.display = '';
     document.getElementById('condition-strip-text').innerHTML =
-      buildFullNarrativeHtml(state.me.gender, state.me.persona.age, state.me.persona.narrative, state.openingTemplate);
+      buildNarrativeHtml(state.me.gender, state.me.persona);
   }
 
   renderMyTrack('my-track', state.me.position || 0, state.otherPositions || []);
@@ -464,7 +464,7 @@ function showQuestion(state) {
     if (confirmedQuestionIndex !== state.questionIndex) {
       confirmedQuestionIndex = state.questionIndex;
       triggerFlash('flash-submitted');
-      showToast(describeMoveResult(alreadyAnswered.delta), 'success');
+      showToast(describeMoveResult(alreadyAnswered.delta));
     }
   } else {
     btn1.disabled = false;
@@ -555,6 +555,6 @@ function renderEnded(state) {
   } else {
     cardEl.style.display = '';
     document.getElementById('final-condition-list').innerHTML =
-      buildFullNarrativeHtml(state.me.gender, state.me.persona.age, state.me.persona.narrative, state.openingTemplate);
+      buildNarrativeHtml(state.me.gender, state.me.persona);
   }
 }
