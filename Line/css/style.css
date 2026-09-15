@@ -368,41 +368,71 @@ input[type="text"]:focus { border-color: var(--track); }
 .condition-card.intro h3 { font-size: 1.15rem; margin-bottom: 16px; }
 .condition-card.intro .condition-item { font-size: 1.05rem; padding: 10px 0; }
 
-/* 질문 화면에서 항상 보이는 조건 요약 줄 - 눈에 띄지 않게 방해하지 않으면서도 잘 읽히게 */
+/* 질문 화면에서 항상 보이는 조건 요약 카드 - 다른 카드들과 같은 스타일 언어(헤더+본문) */
 .condition-strip {
   background: var(--paper);
-  border-left: 4px solid var(--track);
-  color: var(--ink);
-  font-size: 0.92rem;
-  line-height: 1.65;
-  padding: 14px 18px;
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 16px;
   box-shadow: var(--shadow);
 }
-.condition-strip strong { color: var(--track); }
+.card-header {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--track);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.condition-strip .condition-narrative {
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
 
-/* ---------- 질문/응답 (student) - 여기에 시선이 집중되도록 크게 ---------- */
-.question-panel { padding: 26px 24px; }
+/* ---------- 질문/응답 (student) - 고정 높이 + 내부 구조로
+   질문 길이가 달라져도 카드 전체 높이가 흔들리지 않게 합니다. ---------- */
+.question-panel {
+  padding: 22px 24px;
+  height: 420px;
+  display: flex;
+  flex-direction: column;
+}
+.question-panel .card-header {
+  flex: 0 0 auto;
+}
+.question-text-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  overflow-y: auto;
+  margin: 6px 0;
+}
 .big-question {
   font-family: var(--font-head);
   font-size: 1.55rem;
   line-height: 1.5;
   color: var(--ink);
 }
+.answer-area {
+  flex: 0 0 auto;
+  border-top: 2px solid var(--line);
+  padding-top: 16px;
+  margin-top: 8px;
+}
 
 .choice-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
-  margin-top: 22px;
 }
 @media (max-width: 420px) {
   .choice-grid { grid-template-columns: 1fr; }
 }
 .choice-btn {
   border-radius: var(--radius);
-  padding: 28px 16px;
+  padding: 20px 16px;
   text-align: center;
   border: 2px solid var(--line);
   background: var(--paper);
@@ -418,12 +448,13 @@ input[type="text"]:focus { border-color: var(--track); }
 }
 .condition-narrative strong { color: var(--track); }
 
-/* ---------- 학생 화면: "내 위치" 개인 트랙 ---------- */
+/* ---------- 학생 화면: "내 위치" 개인 트랙 ----------
+   아이들이 가로로 늘어서 있는 모습을 반영해, 세로가 아니라 가로 폭을 최대한 넓게 씁니다. */
 .my-track-wrap {
   margin-top: 0;
 }
 .my-track-wrap .track {
-  height: 340px;
+  height: 260px;
 }
 .student-dot.other {
   width: 18px;
@@ -448,41 +479,22 @@ input[type="text"]:focus { border-color: var(--track); }
   z-index: 2;
 }
 
-/* ---------- 학생 화면: 질문 레이아웃 ----------
-   기본(좁은 화면)은 위아래로 쌓이고, 태블릿 가로 폭 이상에서는
-   "내 위치" 트랙과 질문/선택지가 좌우로 나란히 배치되어 한 화면에 들어옵니다.
-   이때 두 칸의 높이가 서로 어긋나 보이지 않도록 같은 높이로 늘려서 맞춥니다. */
-.question-layout {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+/* 결과 화면: 스크롤 없이 한 화면에 들어오도록 트랙을 조금 더 낮게 */
+.my-track-wrap.compact .track {
+  height: 200px;
 }
-.question-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-
-@media (min-width: 860px) {
-  .question-layout {
-    flex-direction: row;
-    align-items: stretch;
-  }
-  .question-layout .my-track-wrap {
-    flex: 0 0 340px;
-    display: flex;
-    flex-direction: column;
-  }
-  .question-layout .my-track-wrap .track {
-    flex: 1;
-    height: auto;
-    min-height: 440px;
-  }
-  .question-layout .question-col {
-    flex: 1;
-  }
-  .question-layout .question-panel {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
+.final-summary {
+  text-align: center;
+}
+.final-summary .fs-main {
+  font-family: var(--font-head);
+  font-size: 1.3rem;
+  color: var(--track);
+}
+.final-summary .fs-sub {
+  margin-top: 4px;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
 }
 
 /* ---------- 새 질문 도착 / 제출 완료 피드백 ---------- */

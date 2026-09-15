@@ -411,12 +411,13 @@ function showQuestion(state) {
   document.getElementById('sub-waiting-teacher').style.display = 'none';
   document.getElementById('sub-question').style.display = '';
 
-  const stripEl = document.getElementById('condition-strip');
+  const stripCard = document.getElementById('condition-strip-card');
   if (state.mode === 'self' || !state.me.persona) {
-    stripEl.style.display = 'none';
+    stripCard.style.display = 'none';
   } else {
-    stripEl.style.display = '';
-    stripEl.innerHTML = buildFullNarrativeHtml(state.me.gender, state.me.persona.age, state.me.persona.narrative, state.openingTemplate);
+    stripCard.style.display = '';
+    document.getElementById('condition-strip-text').innerHTML =
+      buildFullNarrativeHtml(state.me.gender, state.me.persona.age, state.me.persona.narrative, state.openingTemplate);
   }
 
   renderMyTrack('my-track', state.me.position || 0, state.otherPositions || []);
@@ -535,7 +536,7 @@ function submitChoice(choice) {
 }
 
 function renderEnded(state) {
-  document.getElementById('final-position').textContent = describePosition(state.me.position || 0);
+  document.getElementById('final-position').textContent = '나의 최종 위치: ' + describePosition(state.me.position || 0);
 
   const p = state.me.percentile;
   const pEl = document.getElementById('final-percentile');
