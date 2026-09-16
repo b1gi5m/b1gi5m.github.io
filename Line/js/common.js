@@ -159,11 +159,13 @@ function clearStudentSession() {
 // ---------- 엑셀(xlsx) 파싱 ----------
 // personas 시트 : 내러티브   (한 행 = 완성된 배경 서사 한 개, 중복 없이 학생 수만큼 배정됨)
 // questions 시트: 순서 | 질문내용 | 선택지1 | 선택지1칸수 | 선택지2 | 선택지2칸수
-// settings 시트 : 항목 | 값        (예: 활동안내 | 1. ...\n2. ...)
+// guide 시트    : 순번 | 내용     (한 행 = 활동 안내문의 한 줄)
+// settings 시트 : 항목 | 값        (guide 시트가 없을 때의 대체용, 한 칸에 줄바꿈으로 여러 줄 작성)
 function parseConfigWorkbook(workbook) {
   const personaSheetName = workbook.SheetNames.find(n => n.trim() === "personas" || n.trim() === "페르소나") || workbook.SheetNames[0];
   const qSheetName = workbook.SheetNames.find(n => n.trim() === "questions" || n.trim() === "질문") || workbook.SheetNames[1];
   const settingsSheetName = workbook.SheetNames.find(n => n.trim() === "settings" || n.trim() === "설정");
+  const guideSheetName = workbook.SheetNames.find(n => n.trim() === "guide" || n.trim() === "안내");
 
   const personas = [];
   if (personaSheetName) {
@@ -193,7 +195,23 @@ function parseConfigWorkbook(workbook) {
   }
 
   let introInstructions = null;
-  if (settingsSheetName) {
+
+  // guide 시트가 있으면 우선 사용 (순번대로 정렬해 줄바꿈으로 이어붙임)
+  if (guideSheetName) {
+    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[guideSheetName], { defval: "" });
+    const lines = rows
+      .map(row => ({
+        order: Number(row["순번"] || row["order"] || 0),
+        text: String(row["내용"] || row["content"] || "").trim()
+      }))
+      .filter(r => r.text)
+      .sort((a, b) => a.order - b.order)
+      .map(r => r.text);
+    if (lines.length) introInstructions = lines.join("\n");
+  }
+
+  // guide 시트가 없으면 settings 시트의 한 칸짜리 문구로 대체
+  if (!introInstructions && settingsSheetName) {
     const rows = XLSX.utils.sheet_to_json(workbook.Sheets[settingsSheetName], { defval: "" });
     rows.forEach(row => {
       const key = String(row["항목"] || row["key"] || "").trim();
