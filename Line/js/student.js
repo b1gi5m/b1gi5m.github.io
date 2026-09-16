@@ -35,7 +35,7 @@ function on(id, event, handler) {
 function triggerFlash(type) {
   const el = document.getElementById('flash-overlay');
   if (!el) return;
-  el.classList.remove('flash-question', 'flash-submitted');
+  el.classList.remove('flash-question', 'flash-forward', 'flash-stay', 'flash-back');
   void el.offsetWidth; // 강제 리플로우 - 같은 애니메이션을 다시 재생하기 위함
   el.classList.add(type);
 }
@@ -412,10 +412,13 @@ function showQuestion(state) {
   document.getElementById('sub-question').style.display = '';
 
   const stripCard = document.getElementById('condition-strip-card');
+  const cardGroup = document.getElementById('card-group');
   if (state.mode === 'self' || !state.me.persona) {
     stripCard.style.display = 'none';
+    if (cardGroup) cardGroup.classList.add('solo-question');
   } else {
     stripCard.style.display = '';
+    if (cardGroup) cardGroup.classList.remove('solo-question');
     document.getElementById('condition-strip-text').innerHTML =
       buildNarrativeHtml(state.me.gender, state.me.persona);
   }
@@ -463,8 +466,9 @@ function showQuestion(state) {
     note.style.display = '';
     if (confirmedQuestionIndex !== state.questionIndex) {
       confirmedQuestionIndex = state.questionIndex;
-      triggerFlash('flash-submitted');
-      showToast(describeMoveResult(alreadyAnswered.delta));
+      const d = alreadyAnswered.delta || 0;
+      triggerFlash(d > 0 ? 'flash-forward' : d < 0 ? 'flash-back' : 'flash-stay');
+      showToast(describeMoveResult(d));
     }
   } else {
     btn1.disabled = false;

@@ -91,32 +91,34 @@
         </div>
       </div>
 
-      <div class="panel question-panel" style="margin-top:16px;">
+      <div class="card-group" id="card-group" style="margin-top:16px;">
         <div class="condition-strip" id="condition-strip-card">
           <div class="card-header">나의 배경</div>
           <p id="condition-strip-text" class="condition-narrative"></p>
         </div>
 
-        <div class="card-header" id="q-index-label">질문</div>
-        <div class="question-text-area">
-          <h2 class="big-question" id="q-text">질문을 기다리는 중...</h2>
-        </div>
-        <div class="answer-area">
-          <div class="choice-grid" id="choice-grid">
-            <button class="choice-btn" id="btn-choice-1">
-              <div class="c-label" id="label-1">선택지1</div>
-            </button>
-            <button class="choice-btn" id="btn-choice-2">
-              <div class="c-label" id="label-2">선택지2</div>
-            </button>
+        <div class="panel question-panel">
+          <div class="card-header" id="q-index-label">질문</div>
+          <div class="question-text-area">
+            <h2 class="big-question" id="q-text">질문을 기다리는 중...</h2>
           </div>
+          <div class="answer-area">
+            <div class="choice-grid" id="choice-grid">
+              <button class="choice-btn" id="btn-choice-1">
+                <div class="c-label" id="label-1">선택지1</div>
+              </button>
+              <button class="choice-btn" id="btn-choice-2">
+                <div class="c-label" id="label-2">선택지2</div>
+              </button>
+            </div>
 
-          <button class="btn btn-primary btn-block btn-lg" id="btn-confirm-choice" style="margin-top:14px;" disabled>
-            확정하기
-          </button>
+            <button class="btn btn-primary btn-block btn-lg" id="btn-confirm-choice" style="margin-top:14px;" disabled>
+              확정하기
+            </button>
 
-          <div class="helper" id="answered-note" style="text-align:center; display:none; margin-top:10px;">
-            ✓ 응답을 제출했습니다. 다음 질문을 기다려주세요.
+            <div class="helper" id="answered-note" style="text-align:center; display:none; margin-top:10px;">
+              ✓ 응답을 제출했습니다. 다음 질문을 기다려주세요.
+            </div>
           </div>
         </div>
       </div>

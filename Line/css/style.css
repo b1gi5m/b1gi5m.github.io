@@ -380,12 +380,19 @@ input[type="text"]:focus { border-color: var(--track); }
 .condition-card.intro h3 { font-size: 1.15rem; margin-bottom: 16px; }
 .condition-card.intro .condition-item { font-size: 1.05rem; padding: 10px 0; }
 
-/* 질문 화면에서 항상 보이는 조건 요약 카드 - 다른 카드들과 같은 스타일 언어(헤더+본문) */
-.condition-strip {
+/* 질문 화면: "나의 배경" 카드와 "질문" 카드를 딱 붙여서, 점선으로만 구분합니다.
+   서로 관련은 있지만 성격이 다른 정보라는 걸 시각적으로 표현합니다. */
+.card-group {
+  display: flex;
+  flex-direction: column;
+}
+.card-group .condition-strip {
   background: var(--track-dim);
-  border-radius: var(--radius-sm);
-  padding: 14px 18px;
-  margin-bottom: 18px;
+  border: 1px solid var(--line);
+  border-bottom: 2px dashed var(--line);
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 14px 20px;
+  box-shadow: var(--shadow);
 }
 .card-header {
   font-size: 0.8rem;
@@ -402,17 +409,26 @@ input[type="text"]:focus { border-color: var(--track); }
 
 /* ---------- 질문/응답 (student) - 고정 높이 + 내부 구조로
    질문 길이가 달라져도 카드 전체 높이가 흔들리지 않게 합니다. ---------- */
-.question-panel {
-  padding: 22px 24px;
+.card-group .question-panel {
+  border: 1px solid var(--line);
+  border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px 24px;
+}
+/* 익명 모드 등 "나의 배경" 카드가 없을 때는 질문 카드 혼자 온전한 카드 모양이 되도록 */
+.card-group.solo-question .question-panel {
+  border-top: 1px solid var(--line);
+  border-radius: var(--radius);
 }
 .question-panel .card-header {
-  margin-top: 4px;
+  margin-top: 0;
 }
 .question-text-area {
-  min-height: 100px;
+  min-height: 90px;
   display: flex;
   align-items: center;
-  margin: 10px 0;
+  margin: 8px 0;
 }
 .big-question {
   font-family: var(--font-head);
@@ -422,27 +438,27 @@ input[type="text"]:focus { border-color: var(--track); }
 }
 .answer-area {
   border-top: 2px solid var(--line);
-  padding-top: 16px;
-  margin-top: 8px;
+  padding-top: 14px;
+  margin-top: 6px;
 }
 
 .choice-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 10px;
 }
 @media (max-width: 420px) {
   .choice-grid { grid-template-columns: 1fr; }
 }
 .choice-btn {
-  border-radius: var(--radius);
-  padding: 15px 14px;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
   text-align: center;
   border: 2px solid var(--line);
   background: var(--paper);
 }
 .choice-btn:hover:not(:disabled) { border-color: var(--track); background: var(--track-dim); }
-.choice-btn .c-label { font-weight: 700; font-size: 1.02rem; }
+.choice-btn .c-label { font-weight: 700; font-size: 0.92rem; }
 .choice-btn.selected { border-color: var(--track); background: var(--track-dim); }
 
 .condition-narrative {
@@ -512,12 +528,22 @@ input[type="text"]:focus { border-color: var(--track); }
 }
 .flash-overlay.flash-question {
   border-width: 12px;
-  border-color: var(--accent);
+  border-color: #4C8FC4;
   animation: flashFade 1s ease forwards;
 }
-.flash-overlay.flash-submitted {
+.flash-overlay.flash-forward {
   border-width: 12px;
-  border-color: var(--ink-soft);
+  border-color: var(--success);
+  animation: flashFade 1s ease forwards;
+}
+.flash-overlay.flash-stay {
+  border-width: 12px;
+  border-color: #D6A526;
+  animation: flashFade 1s ease forwards;
+}
+.flash-overlay.flash-back {
+  border-width: 12px;
+  border-color: var(--danger);
   animation: flashFade 1s ease forwards;
 }
 @keyframes flashFade {
