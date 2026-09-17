@@ -474,9 +474,8 @@ function renderTrack(trackId, students, currentQuestionIndex, showStatus) {
     dot.style.top = yPct + '%';
     dot.style.background = colorForKey(key);
     if (!anonymized) {
-      dot.addEventListener('mouseenter', e => showTooltip(e, student));
-      dot.addEventListener('mousemove', moveTooltip);
-      dot.addEventListener('mouseleave', hideTooltip);
+      dot.addEventListener('mouseenter', () => { dot.textContent = student.number || ''; });
+      dot.addEventListener('mouseleave', () => { dot.textContent = ''; });
     }
     if (clickableForDetail) {
       dot.addEventListener('click', () => openStudentModal(student));
@@ -501,22 +500,6 @@ function renderStatusLists(students, currentQuestionIndex) {
     '<span class="empty-note">없음</span>';
 }
 
-// 트랙 위 호버는 번호만 보여줍니다 (조건/응답 상세는 결과 화면에서 클릭으로 확인)
-function showTooltip(e, student) {
-  const tip = document.getElementById('tooltip');
-  tip.innerHTML = `<div class="t-title">번호 ${escapeHtml(student.number || '')}</div>`;
-  tip.style.display = 'block';
-  moveTooltip(e);
-}
-function moveTooltip(e) {
-  const tip = document.getElementById('tooltip');
-  tip.style.left = (e.clientX + 14) + 'px';
-  tip.style.top = (e.clientY + 14) + 'px';
-}
-function hideTooltip() {
-  document.getElementById('tooltip').style.display = 'none';
-}
-
 // 결과 화면에서 학생 아이콘을 클릭하면 조건과 응답 기록을 팝업으로 보여줍니다.
 function openStudentModal(student) {
   const backdrop = document.getElementById('student-modal-backdrop');
@@ -532,10 +515,10 @@ function openStudentModal(student) {
   const rows = questions.map((q, i) => {
     const r = responses[i];
     if (!r) {
-      return `<div class="history-row"><div class="history-q">${escapeHtml(q.text)}</div><div class="history-a empty-note">응답 없음</div></div>`;
+      return `<div class="history-row"><div class="history-q">${i + 1}. ${escapeHtml(q.text)}</div><div class="history-a empty-note">응답 없음</div></div>`;
     }
     const label = r.choice === 'choice1' ? q.choice1Label : q.choice2Label;
-    return `<div class="history-row"><div class="history-q">${escapeHtml(q.text)}</div><div class="history-a">${escapeHtml(label)}</div></div>`;
+    return `<div class="history-row"><div class="history-q">${i + 1}. ${escapeHtml(q.text)}</div><div class="history-a">${escapeHtml(label)}</div></div>`;
   }).join('');
   document.getElementById('modal-history').innerHTML = rows || '<div class="empty-note">응답 기록이 없습니다</div>';
 

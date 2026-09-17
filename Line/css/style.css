@@ -73,6 +73,18 @@ input[type="text"] {
 }
 input[type="text"]:focus { border-color: var(--track); }
 
+select {
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  width: 100%;
+}
+select:focus { border-color: var(--track); }
+
 .app-shell {
   min-height: 100vh;
   display: flex;
@@ -294,10 +306,22 @@ input[type="text"]:focus { border-color: var(--track); }
   width: 26px; height: 26px;
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  transition: top 0.7s cubic-bezier(.34,1.4,.4,1);
+  transition: top 0.7s cubic-bezier(.34,1.4,.4,1), width 0.12s ease, height 0.12s ease;
   border: 2px solid #fff;
   box-shadow: 0 2px 6px rgba(0,0,0,0.18);
   cursor: default;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.student-dot:not(:empty) {
+  width: 34px; height: 34px;
+  z-index: 3;
 }
 .student-dot.pending {
   box-shadow: 0 0 0 3px var(--danger-soft);
@@ -305,21 +329,6 @@ input[type="text"]:focus { border-color: var(--track); }
 .student-dot.answered {
   box-shadow: 0 0 0 3px var(--success-soft);
 }
-
-.tooltip {
-  position: fixed;
-  z-index: 50;
-  background: var(--ink);
-  color: #fff;
-  padding: 10px 14px;
-  border-radius: var(--radius-sm);
-  font-size: 0.82rem;
-  line-height: 1.5;
-  max-width: 240px;
-  pointer-events: none;
-  box-shadow: var(--shadow);
-}
-.tooltip .t-title { font-weight: 700; margin-bottom: 4px; }
 
 /* ---------- status lists (한 패널 안에 두 칸) ---------- */
 .status-columns {
@@ -549,7 +558,7 @@ input[type="text"]:focus { border-color: var(--track); }
 }
 .flash-overlay.flash-alert {
   border-width: 10px;
-  border-color: var(--track-light);
+  border-color: var(--accent);
   animation: flashFade 0.9s ease forwards;
 }
 @keyframes flashFade {
