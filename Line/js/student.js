@@ -31,13 +31,23 @@ function on(id, event, handler) {
   el.addEventListener(event, handler);
 }
 
+// 숫자가 아닌 문자는 입력 즉시 걸러냅니다.
+function onDigitsOnly(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', () => {
+    const digitsOnly = el.value.replace(/\D/g, '');
+    if (digitsOnly !== el.value) el.value = digitsOnly;
+  });
+}
+
 // ---------- 새 질문 도착 / 제출 완료 피드백 ----------
-function triggerFlash(type) {
+function triggerFlash() {
   const el = document.getElementById('flash-overlay');
   if (!el) return;
-  el.classList.remove('flash-question', 'flash-forward', 'flash-stay', 'flash-back');
+  el.classList.remove('flash-alert');
   void el.offsetWidth; // 강제 리플로우 - 같은 애니메이션을 다시 재생하기 위함
-  el.classList.add(type);
+  el.classList.add('flash-alert');
 }
 function showToast(msg, kind) {
   const el = document.getElementById('toast');
@@ -49,13 +59,6 @@ function showToast(msg, kind) {
   toastTimer = setTimeout(() => el.classList.remove('show'), 1800);
 }
 
-// 이동 결과(칸수)를 사람이 읽기 좋은 문구로 바꿉니다.
-function describeMoveResult(delta) {
-  const d = delta || 0;
-  if (d > 0) return d === 1 ? '앞으로 한 걸음' : `앞으로 ${d}걸음`;
-  if (d < 0) return Math.abs(d) === 1 ? '뒤로 한 걸음' : `뒤로 ${Math.abs(d)}걸음`;
-  return '제자리';
-}
 
 function showView(name) {
   ['join', 'waiting', 'active', 'ended'].forEach(v => {
@@ -72,12 +75,16 @@ document.addEventListener('DOMContentLoaded', () => {
   on('btn-gender-male', 'click', () => selectGender('남'));
   on('btn-gender-female', 'click', () => selectGender('여'));
 
+  // 숫자만 입력되도록 실시간으로 걸러줍니다.
+  onDigitsOnly('join-code');
+  onDigitsOnly('join-number');
+
   on('btn-join', 'click', () => {
     const code = document.getElementById('join-code').value.trim();
     const number = document.getElementById('join-number').value.trim();
     setJoinError('');
-    if (!/^\d{4}$/.test(code)) { setJoinError('방 번호 4자리를 정확히 입력해주세요.'); return; }
-    if (!number) { setJoinError('학번을 입력해주세요.'); return; }
+    if (!/^\d{4}$/.test(code)) { setJoinError('입장 코드 4자리를 정확히 입력해주세요.'); return; }
+    if (!/^\d{1,2}$/.test(number)) { setJoinError('번호를 1~2자리 숫자로 입력해주세요.'); return; }
     if (!myGender) { setJoinError('성별을 선택해주세요.'); return; }
     startJoin(code, number, null, myGender);
   });
@@ -332,7 +339,7 @@ function scheduleReconnect() {
   if (reconnectAttempts > 8) {
     clearStudentSession();
     showView('join');
-    setJoinError('연결이 끊어졌습니다. 방 번호와 학번을 확인하고 다시 입장해주세요.');
+    setJoinError('연결이 끊어졌습니다. 입장 코드와 내 번호를 확인하고 다시 입장해주세요.');
     return;
   }
 
@@ -438,7 +445,7 @@ function showQuestion(state) {
   if (state.questionIndex !== lastRenderedQuestionIndex) {
     lastRenderedQuestionIndex = state.questionIndex;
     pendingChoice = null;
-    triggerFlash('flash-question');
+    triggerFlash();
     showToast('다음 질문 확인');
   }
 
@@ -467,7 +474,7 @@ function showQuestion(state) {
     if (confirmedQuestionIndex !== state.questionIndex) {
       confirmedQuestionIndex = state.questionIndex;
       const d = alreadyAnswered.delta || 0;
-      triggerFlash(d > 0 ? 'flash-forward' : d < 0 ? 'flash-back' : 'flash-stay');
+      triggerFlash();
       showToast(describeMoveResult(d));
     }
   } else {
@@ -540,25 +547,57 @@ function submitChoice(choice) {
 }
 
 function renderEnded(state) {
-  document.getElementById('final-position').textContent = '나의 최종 위치: ' + describePosition(state.me.position || 0);
+  const pos = state.me.position || 0;
+  document.getElementById('final-position').textContent = describePosition(pos);
 
   const p = state.me.percentile;
   const pEl = document.getElementById('final-percentile');
   if (p) {
-    pEl.textContent = `우리 반 ${p.total}명 중 상위 ${p.percentileFromTop}% (앞에서 ${p.rank}번째)`;
+    if (pos >= 0) {
+      pEl.textContent = `우리 반 ${p.total}명 중 상위 ${p.percentileFromTop}% (앞에서 ${p.rankFromTop}번째)`;
+    } else {
+      pEl.textContent = `우리 반 ${p.total}명 중 하위 ${p.percentileFromBottom}% (뒤에서 ${p.rankFromBottom}번째)`;
+    }
     pEl.style.display = '';
   } else {
     pEl.style.display = 'none';
   }
 
-  renderMyTrack('my-track-ended', state.me.position || 0, state.otherPositions || []);
+  renderMyTrack('my-track-ended', pos, state.otherPositions || []);
 
   const cardEl = document.getElementById('final-condition-card');
+  const groupEl = document.getElementById('card-group-ended');
   if (state.mode === 'self' || !state.me.persona) {
     cardEl.style.display = 'none';
+    if (groupEl) groupEl.classList.add('solo-question');
   } else {
     cardEl.style.display = '';
+    if (groupEl) groupEl.classList.remove('solo-question');
     document.getElementById('final-condition-list').innerHTML =
       buildNarrativeHtml(state.me.gender, state.me.persona);
   }
+
+  renderAnswerHistory(state);
+}
+
+// 그동안 각 질문에 어떻게 답했는지 목록으로 보여줍니다.
+function renderAnswerHistory(state) {
+  const el = document.getElementById('answer-history-list');
+  if (!el) return;
+  const qs = state.allQuestions || [];
+  const responses = state.me.responses || {};
+
+  if (qs.length === 0) {
+    el.innerHTML = '<div class="empty-note">응답 기록을 불러올 수 없습니다</div>';
+    return;
+  }
+
+  el.innerHTML = qs.map((q, i) => {
+    const r = responses[i];
+    if (!r) {
+      return `<div class="history-row"><div class="history-q">${escapeHtml(q.text)}</div><div class="history-a empty-note">응답 없음</div></div>`;
+    }
+    const label = r.choice === 'choice1' ? q.choice1Label : q.choice2Label;
+    return `<div class="history-row"><div class="history-q">${escapeHtml(q.text)}</div><div class="history-a">${escapeHtml(label)}</div></div>`;
+  }).join('');
 }

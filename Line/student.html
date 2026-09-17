@@ -30,12 +30,12 @@
       <h2 class="section-title">방 입장하기</h2>
       <div class="stack">
         <div>
-          <label class="helper">방 번호</label>
+          <label class="helper">입장 코드</label>
           <input type="text" id="join-code" placeholder="예: 1234" maxlength="4" inputmode="numeric" style="margin-top:6px;" />
         </div>
         <div>
-          <label class="helper">학번</label>
-          <input type="text" id="join-number" placeholder="예: 1234" inputmode="numeric" style="margin-top:6px;" />
+          <label class="helper">번호</label>
+          <input type="text" id="join-number" placeholder="예: 7" maxlength="2" inputmode="numeric" style="margin-top:6px;" />
         </div>
         <div>
           <label class="helper" style="display:block; text-align:center;">성별</label>
@@ -58,7 +58,7 @@
     <div class="waiting-note panel">
       <div class="big">입장 완료!</div>
       <p>선생님이 활동을 시작할 때까지 잠시 기다려주세요.</p>
-      <p class="helper" style="margin-top:10px;">학번: <strong id="waiting-number"></strong></p>
+      <p class="helper" style="margin-top:10px;">번호: <strong id="waiting-number"></strong></p>
       <button class="btn btn-ghost" id="btn-leave-waiting" style="margin-top:18px;">처음 화면으로</button>
     </div>
   </div>
@@ -93,7 +93,7 @@
 
       <div class="card-group" id="card-group" style="margin-top:16px;">
         <div class="condition-strip" id="condition-strip-card">
-          <div class="card-header">나의 배경</div>
+          <div class="card-header">나의 조건</div>
           <p id="condition-strip-text" class="condition-narrative"></p>
         </div>
 
@@ -134,14 +134,22 @@
       </div>
     </div>
 
-    <div class="panel" id="final-condition-card" style="margin-top:14px;">
-      <div class="card-header">나의 조건</div>
-      <p id="final-condition-list" class="condition-narrative"></p>
+    <div class="card-group" id="card-group-ended" style="margin-top:16px;">
+      <div class="panel final-condition-card" id="final-condition-card">
+        <div class="card-header">나의 조건</div>
+        <p id="final-condition-list" class="condition-narrative"></p>
+      </div>
+
+      <div class="panel final-summary">
+        <div class="card-header">나의 최종 위치</div>
+        <div class="fs-main" id="final-position"></div>
+        <div class="fs-sub" id="final-percentile" style="display:none;"></div>
+      </div>
     </div>
 
-    <div class="panel final-summary" style="margin-top:14px;">
-      <div class="fs-main" id="final-position"></div>
-      <div class="fs-sub" id="final-percentile" style="display:none;"></div>
+    <div class="panel" style="margin-top:16px;">
+      <div class="card-header">나의 응답 기록</div>
+      <div id="answer-history-list"></div>
     </div>
   </div>
 </div>

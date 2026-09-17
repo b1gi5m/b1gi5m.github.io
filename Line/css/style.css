@@ -386,13 +386,15 @@ input[type="text"]:focus { border-color: var(--track); }
   display: flex;
   flex-direction: column;
 }
-.card-group .condition-strip {
+.card-group .condition-strip,
+.card-group .final-condition-card {
   background: var(--paper);
   border: 1px solid var(--line);
   border-bottom: 2px dashed var(--line);
   border-radius: var(--radius) var(--radius) 0 0;
   padding: 20px 24px;
   box-shadow: var(--shadow);
+  margin-bottom: 0;
 }
 .card-header {
   font-size: 0.8rem;
@@ -409,15 +411,18 @@ input[type="text"]:focus { border-color: var(--track); }
 
 /* ---------- 질문/응답 (student) - 고정 높이 + 내부 구조로
    질문 길이가 달라져도 카드 전체 높이가 흔들리지 않게 합니다. ---------- */
-.card-group .question-panel {
+.card-group .question-panel,
+.card-group .final-summary {
   border: 1px solid var(--line);
   border-top: none;
   border-radius: 0 0 var(--radius) var(--radius);
   box-shadow: var(--shadow);
   padding: 20px 24px;
+  margin-top: 0;
 }
-/* 익명 모드 등 "나의 배경" 카드가 없을 때는 질문 카드 혼자 온전한 카드 모양이 되도록 */
-.card-group.solo-question .question-panel {
+/* 익명 모드 등 "나의 조건" 카드가 없을 때는 아래 카드 혼자 온전한 카드 모양이 되도록 */
+.card-group.solo-question .question-panel,
+.card-group.solo-question .final-summary {
   border-top: 1px solid var(--line);
   border-radius: var(--radius);
 }
@@ -516,18 +521,24 @@ input[type="text"]:focus { border-color: var(--track); }
 .final-summary {
   text-align: center;
 }
+.final-summary .card-header {
+  text-align: left;
+}
 .final-summary .fs-main {
   font-family: var(--font-head);
-  font-size: 1.3rem;
+  font-size: 1.9rem;
   color: var(--track);
+  margin-top: 6px;
 }
 .final-summary .fs-sub {
-  margin-top: 4px;
+  margin-top: 6px;
   font-size: 0.9rem;
   color: var(--ink-soft);
 }
 
-/* ---------- 새 질문 도착 / 제출 완료 피드백 ---------- */
+/* ---------- 새 질문 도착 / 제출 완료 피드백 ----------
+   방향(초록/노랑/빨강)마다 색을 다르게 했더니 정신없다는 의견에 따라,
+   두 이벤트 모두 차분하게 주의만 환기하는 하나의 색으로 통일합니다. */
 .flash-overlay {
   position: fixed;
   inset: 0;
@@ -536,25 +547,10 @@ input[type="text"]:focus { border-color: var(--track); }
   border: 0 solid transparent;
   opacity: 0;
 }
-.flash-overlay.flash-question {
-  border-width: 12px;
-  border-color: #4C8FC4;
-  animation: flashFade 1s ease forwards;
-}
-.flash-overlay.flash-forward {
-  border-width: 12px;
-  border-color: var(--success);
-  animation: flashFade 1s ease forwards;
-}
-.flash-overlay.flash-stay {
-  border-width: 12px;
-  border-color: #D6A526;
-  animation: flashFade 1s ease forwards;
-}
-.flash-overlay.flash-back {
-  border-width: 12px;
-  border-color: var(--danger);
-  animation: flashFade 1s ease forwards;
+.flash-overlay.flash-alert {
+  border-width: 10px;
+  border-color: var(--track-light);
+  animation: flashFade 0.9s ease forwards;
 }
 @keyframes flashFade {
   0% { opacity: 1; }
@@ -650,3 +646,54 @@ input[type="text"]:focus { border-color: var(--track); }
   color: var(--ink-soft);
   margin-top: 4px;
 }
+
+/* ---------- 학생: 나의 응답 기록 (결과 화면) ---------- */
+.history-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.history-row:last-child { border-bottom: none; }
+.history-q { font-size: 0.92rem; color: var(--ink); flex: 1; }
+.history-a { font-size: 0.88rem; color: var(--track); font-weight: 700; white-space: nowrap; }
+.history-a.empty-note { color: var(--ink-soft); font-weight: 400; }
+
+/* ---------- 교사: 학생 상세 팝업 (결과 화면에서 아이콘 클릭 시) ---------- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(35, 36, 31, 0.55);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-card {
+  background: var(--paper);
+  border-radius: var(--radius);
+  padding: 26px 28px;
+  max-width: 560px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+}
+.modal-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--ink-soft);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.modal-close:hover { color: var(--ink); }
+.modal-card h3 { font-family: var(--font-head); font-size: 1.2rem; margin-bottom: 14px; }
+.student-dot.clickable { cursor: pointer; }

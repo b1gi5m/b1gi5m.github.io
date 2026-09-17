@@ -229,6 +229,14 @@ function clampPosition(pos, min = -10, max = 10) {
   return Math.max(min, Math.min(max, pos));
 }
 
+// 이동 결과(칸수)를 사람이 읽기 좋은 문구로 바꿉니다.
+function describeMoveResult(delta) {
+  const d = delta || 0;
+  if (d > 0) return d === 1 ? '앞으로 한 걸음' : `앞으로 ${d}걸음`;
+  if (d < 0) return Math.abs(d) === 1 ? '뒤로 한 걸음' : `뒤로 ${Math.abs(d)}걸음`;
+  return '제자리';
+}
+
 function escapeHtml(str) {
   return String(str)
     .replace(/&/g, "&amp;")

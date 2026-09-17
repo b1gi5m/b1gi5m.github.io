@@ -21,7 +21,7 @@ function hashCode(str) {
   return h;
 }
 
-// 학생 공 색깔은 학번(키)의 해시로만 정해집니다 - 성별과는 전혀 무관합니다.
+// 학생 공 색깔은 번호(키)의 해시로만 정해집니다 - 성별과는 전혀 무관합니다.
 function colorForKey(key) {
   return DOT_COLORS[Math.abs(hashCode(key)) % DOT_COLORS.length];
 }
@@ -64,6 +64,10 @@ document.addEventListener('DOMContentLoaded', () => {
   on('btn-next-question', 'click', nextQuestion);
   on('btn-end-activity', 'click', endActivity);
   on('btn-delete-room', 'click', deleteRoom);
+  on('btn-modal-close', 'click', closeStudentModal);
+  on('student-modal-backdrop', 'click', e => {
+    if (e.target.id === 'student-modal-backdrop') closeStudentModal();
+  });
 
   const lastCode = loadLastTeacherCode();
   if (lastCode) {
@@ -121,7 +125,7 @@ function rejoinRoom() {
   const errEl = document.getElementById('rejoin-error');
   errEl.textContent = '';
   if (!/^\d{4}$/.test(raw)) {
-    errEl.textContent = '방 번호 4자리를 입력해주세요.';
+    errEl.textContent = '입장 코드 4자리를 입력해주세요.';
     return;
   }
   const saved = loadTeacherRoomState(raw);
@@ -164,9 +168,9 @@ function hostRoom(code, opts) {
       if (opts && opts.isNewRoom && opts.attemptsLeft > 0) {
         createRoom(opts.attemptsLeft - 1);
       } else if (opts && opts.isNewRoom) {
-        showConnWarning('방 번호를 배정하는 데 계속 실패했습니다. 잠시 후 다시 시도해주세요.');
+        showConnWarning('입장 코드를 배정하는 데 계속 실패했습니다. 잠시 후 다시 시도해주세요.');
       } else {
-        showConnWarning('이미 같은 방 번호로 열려있는 창이 있는 것 같습니다. 이전 창을 닫고 다시 시도해주세요.');
+        showConnWarning('이미 같은 입장 코드로 열려있는 창이 있는 것 같습니다. 이전 창을 닫고 다시 시도해주세요.');
       }
     } else if (err.type === 'browser-incompatible') {
       showConnWarning('이 브라우저는 WebRTC를 지원하지 않습니다. 최신 크롬/엣지 브라우저를 사용해주세요.');
@@ -267,9 +271,12 @@ function computePercentile(key) {
   if (total < 2) return null;
   const myPos = students[key] ? (students[key].position || 0) : 0;
   const better = keys.filter(k => (students[k].position || 0) > myPos).length;
-  const rank = better + 1;
-  const percentileFromTop = Math.max(1, Math.round((rank / total) * 100));
-  return { rank, total, percentileFromTop };
+  const worse = keys.filter(k => (students[k].position || 0) < myPos).length;
+  const rankFromTop = better + 1;
+  const rankFromBottom = worse + 1;
+  const percentileFromTop = Math.max(1, Math.round((rankFromTop / total) * 100));
+  const percentileFromBottom = Math.max(1, Math.round((rankFromBottom / total) * 100));
+  return { total, rankFromTop, rankFromBottom, percentileFromTop, percentileFromBottom };
 }
 
 function buildStatePayload(key) {
@@ -289,6 +296,7 @@ function buildStatePayload(key) {
     totalQuestions: questions.length,
     question: questions[idx] || null,
     activityStartedAt: room.activityStartedAt || null,
+    allQuestions: room.status === 'ended' ? questions : null,
     me: {
       number: student.number,
       gender: student.gender || null,
@@ -450,7 +458,8 @@ function renderTrack(trackId, students, currentQuestionIndex, showStatus) {
   const baseline = track.querySelector('.baseline');
   if (baseline) baseline.style.top = yPctForPos(0, range) + '%';
 
-  const anonymized = room.mode === 'self'; // 실제 조건 모드에서는 학번/조건을 아예 숨김
+  const anonymized = room.mode === 'self'; // 실제 조건 모드에서는 번호/조건을 아예 숨김
+  const clickableForDetail = trackId === 'track-ended' && !anonymized; // 결과 화면에서만 클릭 시 상세 팝업
 
   keys.forEach((key, i) => {
     const student = students[key];
@@ -460,7 +469,7 @@ function renderTrack(trackId, students, currentQuestionIndex, showStatus) {
 
     const answered = showStatus && currentQuestionIndex >= 0 && student.responses && student.responses[currentQuestionIndex];
     const dot = document.createElement('div');
-    dot.className = 'student-dot' + (showStatus ? (answered ? ' answered' : ' pending') : '');
+    dot.className = 'student-dot' + (showStatus ? (answered ? ' answered' : ' pending') : '') + (clickableForDetail ? ' clickable' : '');
     dot.style.left = xPct + '%';
     dot.style.top = yPct + '%';
     dot.style.background = colorForKey(key);
@@ -468,6 +477,9 @@ function renderTrack(trackId, students, currentQuestionIndex, showStatus) {
       dot.addEventListener('mouseenter', e => showTooltip(e, student));
       dot.addEventListener('mousemove', moveTooltip);
       dot.addEventListener('mouseleave', hideTooltip);
+    }
+    if (clickableForDetail) {
+      dot.addEventListener('click', () => openStudentModal(student));
     }
     track.appendChild(dot);
   });
@@ -489,12 +501,10 @@ function renderStatusLists(students, currentQuestionIndex) {
     '<span class="empty-note">없음</span>';
 }
 
+// 트랙 위 호버는 번호만 보여줍니다 (조건/응답 상세는 결과 화면에서 클릭으로 확인)
 function showTooltip(e, student) {
   const tip = document.getElementById('tooltip');
-  const narrativeHtml = student.persona
-    ? buildNarrativeHtml(student.gender, student.persona)
-    : '조건 미배정';
-  tip.innerHTML = `<div class="t-title">학번 ${escapeHtml(student.number || '')}</div>${narrativeHtml}`;
+  tip.innerHTML = `<div class="t-title">번호 ${escapeHtml(student.number || '')}</div>`;
   tip.style.display = 'block';
   moveTooltip(e);
 }
@@ -505,6 +515,35 @@ function moveTooltip(e) {
 }
 function hideTooltip() {
   document.getElementById('tooltip').style.display = 'none';
+}
+
+// 결과 화면에서 학생 아이콘을 클릭하면 조건과 응답 기록을 팝업으로 보여줍니다.
+function openStudentModal(student) {
+  const backdrop = document.getElementById('student-modal-backdrop');
+  if (!backdrop) return;
+
+  document.getElementById('modal-title').textContent = `번호 ${student.number || ''}`;
+  document.getElementById('modal-condition').innerHTML = student.persona
+    ? buildNarrativeHtml(student.gender, student.persona)
+    : '조건 미배정';
+
+  const questions = (room.config && room.config.questions) || DEFAULT_QUESTIONS;
+  const responses = student.responses || {};
+  const rows = questions.map((q, i) => {
+    const r = responses[i];
+    if (!r) {
+      return `<div class="history-row"><div class="history-q">${escapeHtml(q.text)}</div><div class="history-a empty-note">응답 없음</div></div>`;
+    }
+    const label = r.choice === 'choice1' ? q.choice1Label : q.choice2Label;
+    return `<div class="history-row"><div class="history-q">${escapeHtml(q.text)}</div><div class="history-a">${escapeHtml(label)}</div></div>`;
+  }).join('');
+  document.getElementById('modal-history').innerHTML = rows || '<div class="empty-note">응답 기록이 없습니다</div>';
+
+  backdrop.style.display = 'flex';
+}
+function closeStudentModal() {
+  const backdrop = document.getElementById('student-modal-backdrop');
+  if (backdrop) backdrop.style.display = 'none';
 }
 
 function nextQuestion() {
