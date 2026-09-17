@@ -41,24 +41,6 @@ function onDigitsOnly(id) {
   });
 }
 
-// 번호 선택 드롭다운을 01~30으로 채웁니다.
-function populateNumberOptions() {
-  const el = document.getElementById('join-number');
-  if (!el || el.options.length > 0) return;
-  const placeholder = document.createElement('option');
-  placeholder.value = '';
-  placeholder.textContent = '번호 선택';
-  placeholder.disabled = true;
-  placeholder.selected = true;
-  el.appendChild(placeholder);
-  for (let i = 1; i <= 30; i++) {
-    const opt = document.createElement('option');
-    opt.value = String(i).padStart(2, '0');
-    opt.textContent = String(i).padStart(2, '0');
-    el.appendChild(opt);
-  }
-}
-
 // ---------- 새 질문 도착 / 제출 완료 피드백 ----------
 function triggerFlash() {
   const el = document.getElementById('flash-overlay');
@@ -95,7 +77,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 숫자만 입력되도록 실시간으로 걸러줍니다.
   onDigitsOnly('join-code');
-  populateNumberOptions();
 
   on('btn-join', 'click', () => {
     const code = document.getElementById('join-code').value.trim();

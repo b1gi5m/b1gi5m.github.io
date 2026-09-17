@@ -76,12 +76,20 @@ input[type="text"]:focus { border-color: var(--track); }
 select {
   font-family: var(--font-body);
   font-size: 1.05rem;
-  padding: 12px 14px;
+  padding: 12px 38px 12px 14px;
   border-radius: var(--radius-sm);
   border: 1.5px solid var(--line);
-  background: var(--paper);
+  background-color: var(--paper);
   color: var(--ink);
   width: 100%;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%235B5A52'><path d='M5.5 7.5l4.5 5 4.5-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 18px;
 }
 select:focus { border-color: var(--track); }
 
