@@ -449,9 +449,9 @@ function showQuestion(state) {
   }
 
   document.getElementById('q-index-label').textContent = `질문 ${state.questionIndex + 1} / ${state.totalQuestions}`;
-  document.getElementById('q-text').textContent = q.text;
-  document.getElementById('label-1').textContent = q.choice1Label;
-  document.getElementById('label-2').textContent = q.choice2Label;
+  document.getElementById('q-text').innerHTML = parseBoldMarkup(q.text);
+  document.getElementById('label-1').innerHTML = parseBoldMarkup(q.choice1Label);
+  document.getElementById('label-2').innerHTML = parseBoldMarkup(q.choice2Label);
 
   const btn1 = document.getElementById('btn-choice-1');
   const btn2 = document.getElementById('btn-choice-2');
@@ -594,9 +594,9 @@ function renderAnswerHistory(state) {
   el.innerHTML = qs.map((q, i) => {
     const r = responses[i];
     if (!r) {
-      return `<div class="history-row"><div class="history-q">${i + 1}. ${escapeHtml(q.text)}</div><div class="history-a empty-note">응답 없음</div></div>`;
+      return `<div class="history-row"><div class="history-q">${i + 1}. ${parseBoldMarkup(q.text)}</div><div class="history-a empty-note">응답 없음</div></div>`;
     }
     const label = r.choice === 'choice1' ? q.choice1Label : q.choice2Label;
-    return `<div class="history-row"><div class="history-q">${i + 1}. ${escapeHtml(q.text)}</div><div class="history-a">${escapeHtml(label)}</div></div>`;
+    return `<div class="history-row"><div class="history-q">${i + 1}. ${parseBoldMarkup(q.text)}</div><div class="history-a">${parseBoldMarkup(label)}</div></div>`;
   }).join('');
 }

@@ -348,7 +348,7 @@ function renderRoom() {
 
 function renderIntroWaiting() {
   const cfg = room.config || {};
-  document.getElementById('intro-instructions').textContent = cfg.introInstructions || DEFAULT_INTRO_INSTRUCTIONS;
+  document.getElementById('intro-instructions').innerHTML = parseBoldMarkup(cfg.introInstructions || DEFAULT_INTRO_INSTRUCTIONS);
 
   const students = room.students || {};
   const keys = Object.keys(students);
@@ -432,7 +432,7 @@ function renderActive() {
   const q = questions[idx] || { text: '(질문 없음)' };
 
   document.getElementById('q-index-label').textContent = `질문 ${idx + 1} / ${questions.length}`;
-  document.getElementById('q-text').textContent = q.text;
+  document.getElementById('q-text').innerHTML = parseBoldMarkup(q.text);
 
   const students = room.students || {};
   renderTrack('track', students, idx, true);
@@ -515,10 +515,10 @@ function openStudentModal(student) {
   const rows = questions.map((q, i) => {
     const r = responses[i];
     if (!r) {
-      return `<div class="history-row"><div class="history-q">${i + 1}. ${escapeHtml(q.text)}</div><div class="history-a empty-note">응답 없음</div></div>`;
+      return `<div class="history-row"><div class="history-q">${i + 1}. ${parseBoldMarkup(q.text)}</div><div class="history-a empty-note">응답 없음</div></div>`;
     }
     const label = r.choice === 'choice1' ? q.choice1Label : q.choice2Label;
-    return `<div class="history-row"><div class="history-q">${i + 1}. ${escapeHtml(q.text)}</div><div class="history-a">${escapeHtml(label)}</div></div>`;
+    return `<div class="history-row"><div class="history-q">${i + 1}. ${parseBoldMarkup(q.text)}</div><div class="history-a">${parseBoldMarkup(label)}</div></div>`;
   }).join('');
   document.getElementById('modal-history').innerHTML = rows || '<div class="empty-note">응답 기록이 없습니다</div>';
 

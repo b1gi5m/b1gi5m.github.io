@@ -676,7 +676,7 @@ select:focus { border-color: var(--track); }
 .history-row:last-child { border-bottom: none; }
 .history-q { font-size: 0.92rem; color: var(--ink); flex: 1; }
 .history-a { font-size: 0.88rem; color: var(--track); font-weight: 700; white-space: nowrap; }
-.history-a.empty-note { color: var(--ink-soft); font-weight: 400; }
+.history-a.empty-note { color: var(--ink-soft); font-weight: 400; font-size: 0.88rem; padding: 0; }
 
 /* ---------- 교사: 학생 상세 팝업 (결과 화면에서 아이콘 클릭 시) ---------- */
 .modal-backdrop {
