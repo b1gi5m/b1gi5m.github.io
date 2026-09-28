@@ -518,7 +518,7 @@ function openStudentModal(student) {
       return `<div class="history-row"><div class="history-q">${i + 1}. ${parseBoldMarkup(q.text)}</div><div class="history-a empty-note">응답 없음</div></div>`;
     }
     const label = r.choice === 'choice1' ? q.choice1Label : q.choice2Label;
-    return `<div class="history-row"><div class="history-q">${i + 1}. ${parseBoldMarkup(q.text)}</div><div class="history-a">${parseBoldMarkup(label)}</div></div>`;
+    return `<div class="history-row"><div class="history-q">${i + 1}. ${parseBoldMarkup(q.text)}</div><div class="history-a">${parseBoldMarkup(label)}<span class="history-move">${describeMoveResult(r.delta)}</span></div></div>`;
   }).join('');
   document.getElementById('modal-history').innerHTML = rows || '<div class="empty-note">응답 기록이 없습니다</div>';
 
