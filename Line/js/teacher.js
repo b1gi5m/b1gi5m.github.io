@@ -64,10 +64,19 @@ document.addEventListener('DOMContentLoaded', () => {
   on('btn-next-question', 'click', nextQuestion);
   on('btn-end-activity', 'click', endActivity);
   on('btn-delete-room', 'click', deleteRoom);
+  on('btn-save-room', 'click', exportRoomToFile);
   on('btn-modal-close', 'click', closeStudentModal);
   on('student-modal-backdrop', 'click', e => {
     if (e.target.id === 'student-modal-backdrop') closeStudentModal();
   });
+
+  const fileInput = document.getElementById('file-import-input');
+  if (fileInput) {
+    fileInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (file) handleFileImport(file);
+    });
+  }
 
   const lastCode = loadLastTeacherCode();
   if (lastCode) {
@@ -138,6 +147,65 @@ function rejoinRoom() {
   hostRoom(raw, { isNewRoom: false });
 }
 
+// ---------- 저장 파일로 내보내기 / 불러오기 ----------
+// 지금 방 상태 전체(학생, 조건, 위치, 응답 기록, 질문 등)를 JSON 파일 하나로 내려받습니다.
+// 이 파일 하나만 있으면 다른 기기·다른 브라우저에서도 그대로 이어서 열 수 있습니다.
+function exportRoomToFile() {
+  if (!room) return;
+  const payload = {
+    savedAt: Date.now(),
+    room: room
+  };
+  const json = JSON.stringify(payload, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `출발선실험_${currentRoomCode || '방'}_${dateStr}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// 저장 파일을 불러와 새 입장 코드로 다시 호스팅합니다.
+// 저장 시점이 진행 중이었으면 이어서 진행되고, 끝난 상태였으면 그 결과를 다시 볼 수 있는
+// 방으로 열립니다 - 학생들이 같은 번호로 재접속하면 자기 결과를 그대로 다시 확인할 수 있습니다.
+function handleFileImport(file) {
+  const errEl = document.getElementById('import-error');
+  if (errEl) errEl.textContent = '';
+
+  const reader = new FileReader();
+  reader.onload = evt => {
+    try {
+      const parsed = JSON.parse(evt.target.result);
+      const loadedRoom = parsed && parsed.room;
+      if (!loadedRoom || !loadedRoom.status || !loadedRoom.students) {
+        throw new Error('올바른 저장 파일이 아닙니다.');
+      }
+      room = loadedRoom;
+      if (!room.mode) room.mode = 'persona';
+      hostImportedRoom();
+    } catch (e) {
+      console.error('저장 파일 불러오기 실패:', e);
+      if (errEl) errEl.textContent = '파일을 읽을 수 없습니다. 올바른 저장 파일인지 확인해주세요.';
+    }
+  };
+  reader.onerror = () => {
+    if (errEl) errEl.textContent = '파일을 읽는 중 오류가 발생했습니다.';
+  };
+  reader.readAsText(file);
+}
+
+// 이미 room 변수에 불러온 상태를 그대로 유지한 채, 코드 충돌 시에도 재시도 가능하게 합니다.
+function hostImportedRoom(attemptsLeft) {
+  attemptsLeft = attemptsLeft === undefined ? 5 : attemptsLeft;
+  const newCode = generateRoomCode();
+  hostRoom(newCode, { isNewRoom: true, attemptsLeft, retry: hostImportedRoom });
+}
+
 function hostRoom(code, opts) {
   hideConnWarning();
   if (peer) {
@@ -166,7 +234,7 @@ function hostRoom(code, opts) {
     console.error('Peer error:', err);
     if (err.type === 'unavailable-id') {
       if (opts && opts.isNewRoom && opts.attemptsLeft > 0) {
-        createRoom(opts.attemptsLeft - 1);
+        (opts.retry || createRoom)(opts.attemptsLeft - 1);
       } else if (opts && opts.isNewRoom) {
         showConnWarning('입장 코드를 배정하는 데 계속 실패했습니다. 잠시 후 다시 시도해주세요.');
       } else {

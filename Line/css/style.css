@@ -232,6 +232,8 @@ select:focus { border-color: var(--track); }
 .btn-ghost:hover:not(:disabled) { border-color: var(--track); }
 .btn-block { width: 100%; }
 .btn-lg { padding: 18px 22px; font-size: 1.08rem; }
+.btn-sm { padding: 7px 14px; font-size: 0.85rem; }
+#topbar-room { display: flex; align-items: center; }
 
 /* ---------- teacher: room code display ---------- */
 .code-display {
